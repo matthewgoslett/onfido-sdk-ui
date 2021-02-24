@@ -11,8 +11,11 @@ This project adheres to the Node [default version scheme](https://docs.npmjs.com
 ### Added
 
 - Internal: Added ScreenLayout component. This is currently used in the Welcome and Complete screens.
+- Internal: Added user consent screen
 
 ### Changed
+
+- Internal: Replace `ts-loader` with `@babel/preset-typescript` for better TypeScript transpilation.
 
 ### Fixed
 

@@ -28,14 +28,9 @@ const SDK_TOKEN_FACTORY_SECRET = process.env.SDK_TOKEN_FACTORY_SECRET || 'NA'
 
 const baseRules = [
   {
-    test: /\.jsx?$/,
+    test: /\.(js|ts)x?$/,
     include: [`${__dirname}/src`],
     use: ['babel-loader'],
-  },
-  {
-    test: /\.tsx?$/,
-    include: [`${__dirname}/src`],
-    use: ['ts-loader'],
   },
 ]
 
@@ -119,8 +114,12 @@ const PROD_CONFIG = {
   MOBILE_URL: 'https://id.onfido.com',
   SMS_DELIVERY_URL: 'https://telephony.onfido.com',
   PUBLIC_PATH: `https://assets.onfido.com/web-sdk-releases/${packageJson.version}/`,
+  USER_CONSENT_URL: 'https://assets.onfido.com/consent/user_consent.html',
   RESTRICTED_XDEVICE_FEATURE_ENABLED: true,
   WOOPRA_DOMAIN,
+
+  // @TODO: clean-up this config when v4 APIs are live
+  USE_V4_APIS_FOR_DOC_VIDEO: process.env.USE_V4_APIS_FOR_DOC_VIDEO,
 }
 
 const TEST_DEPLOYMENT_CONFIG = {
@@ -155,6 +154,9 @@ const STAGING_CONFIG = {
   PUBLIC_PATH: '/',
   RESTRICTED_XDEVICE_FEATURE_ENABLED: true,
   WOOPRA_DOMAIN: WOOPRA_DEV_DOMAIN,
+
+  // @TODO: clean-up this config when v4 APIs are live
+  USE_V4_APIS_FOR_DOC_VIDEO: process.env.USE_V4_APIS_FOR_DOC_VIDEO,
 }
 
 const DEVELOPMENT_CONFIG = {
