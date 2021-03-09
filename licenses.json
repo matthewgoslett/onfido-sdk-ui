@@ -3413,12 +3413,6 @@
     "path": "node_modules/create-hmac",
     "licenseFile": "node_modules/create-hmac/LICENSE"
   },
-  "create-react-class@15.7.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/facebook/react",
-    "path": "node_modules/create-react-class",
-    "licenseFile": "node_modules/create-react-class/LICENSE.txt"
-  },
   "create-react-context@0.2.3": {
     "licenses": "MIT*",
     "repository": "https://github.com/thejameskyle/create-react-context",
@@ -10066,7 +10060,7 @@
     "path": "node_modules/react-phone-number-input",
     "licenseFile": "node_modules/react-phone-number-input/LICENSE"
   },
-  "react-redux@7.2.2": {
+  "react-redux@6.0.1": {
     "licenses": "MIT",
     "repository": "https://github.com/reduxjs/react-redux",
     "publisher": "Dan Abramov",
@@ -10113,17 +10107,11 @@
     "path": "node_modules/webpack-visualizer-plugin/node_modules/react",
     "licenseFile": "node_modules/webpack-visualizer-plugin/node_modules/react/LICENSE"
   },
-  "react@15.7.0": {
+  "react@16.14.0": {
     "licenses": "MIT",
     "repository": "https://github.com/facebook/react",
     "path": "node_modules/react",
     "licenseFile": "node_modules/react/LICENSE"
-  },
-  "react@16.13.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/facebook/react",
-    "path": "node_modules/mochawesome-report-generator/node_modules/react",
-    "licenseFile": "node_modules/mochawesome-report-generator/node_modules/react/LICENSE"
   },
   "read-installed@4.0.3": {
     "licenses": "ISC",
