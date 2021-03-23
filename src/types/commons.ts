@@ -3,9 +3,10 @@ import { EnterpriseFeatures } from './enterprise'
 import { SupportedLanguages, LocaleConfig } from './locales'
 import { DocumentTypes, PoaTypes, StepConfig, StepTypes } from './steps'
 import { SdkOptions } from './sdk'
+import { UICustomizationOptions } from './ui-customisation-options'
 
 export interface NormalisedSdkOptions extends SdkOptions {
-  steps?: StepConfig[]
+  steps: StepConfig[]
 }
 
 export type NarrowSdkOptions = Omit<
@@ -59,12 +60,13 @@ export type SdkMetadata = {
 }
 
 export type CountryData = {
-  country_alpha2?: string
-  country_alpha3?: string
-  name?: string
+  country_alpha2: string
+  country_alpha3: string
+  name: string
 }
 
 export type UrlsConfig = {
+  auth_url?: string
   onfido_api_url?: string
   telephony_url?: string
   hosted_sdk_url?: string
@@ -109,17 +111,18 @@ export type ErrorNames =
 export type ErrorTypes = 'error' | 'warning'
 
 export type MobileConfig = {
-  clientStepIndex: number
-  deviceHasCameraSupport: boolean
-  disableAnalytics: boolean
-  documentType: DocumentTypes
-  enterpriseFeatures: EnterpriseFeatures
-  idDocumentIssuingCountry: CountryData
-  language: SupportedLanguages | LocaleConfig
-  poaDocumentType: PoaTypes
-  step: number
+  clientStepIndex?: number
+  deviceHasCameraSupport?: boolean
+  disableAnalytics?: boolean
+  documentType?: DocumentTypes
+  enterpriseFeatures?: EnterpriseFeatures
+  idDocumentIssuingCountry?: CountryData
+  language?: SupportedLanguages | LocaleConfig
+  poaDocumentType?: PoaTypes
+  step?: number
   steps: StepConfig[]
-  token: string
+  token?: string
   urls: UrlsConfig
-  woopraCookie: string
+  woopraCookie?: string | null
+  customUI: UICustomizationOptions | null
 }

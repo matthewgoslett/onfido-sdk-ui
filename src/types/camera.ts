@@ -9,19 +9,19 @@ export type ButtonType = 'photo' | 'video'
 export type CameraProps = {
   audio?: boolean
   buttonType?: ButtonType
-  children?: h.JSX.Element | h.JSX.Element[]
   className?: string
   containerClassName?: string
   docAutoCaptureFrame?: boolean
   docLiveCaptureFrame?: boolean
   facing?: VideoFacingModeEnum
-  idealCameraHeight?: number
+  fallbackToDefaultWidth?: boolean
+  idealCameraWidth?: number
   isButtonDisabled?: boolean
   isUploadFallbackDisabled?: boolean
   onButtonClick?: () => void
-  renderError?: h.JSX.Element
+  renderError?: h.JSX.Element | null
   renderFallback: RenderFallbackProp
-  renderTitle?: h.JSX.Element
-  renderVideoLayer?: (props: WithPermissionsFlowProps) => h.JSX.Element
+  renderTitle?: h.JSX.Element | null
+  renderVideoLayer?: (props: WithPermissionsFlowProps) => h.JSX.Element | null
   webcamRef?: Ref<Webcam>
 }

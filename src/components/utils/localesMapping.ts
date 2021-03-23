@@ -1,5 +1,9 @@
-import { CaptureSteps } from '~types/docVideo'
-import { DocumentTypes, PoaTypes } from '~types/steps'
+import type {
+  CaptureFlows,
+  CaptureSteps,
+  InstructionLocale,
+} from '~types/docVideo'
+import type { DocumentTypes, PoaTypes } from '~types/steps'
 
 type CaptureSideLocale = {
   title: string
@@ -11,7 +15,7 @@ type CaptureLocale = {
   back?: CaptureSideLocale
 }
 
-export type TitleLocale = {
+type TitleLocale = {
   title: string
   subtitle: string
 }
@@ -188,40 +192,53 @@ export const VIDEO_INTRO_LOCALES_MAPPING: Record<
   },
 }
 
-export const DOC_VIDEO_INSTRUCTIONS_MAPPING: {
-  passport: Record<Exclude<CaptureSteps, 'back' | 'complete'>, TitleLocale>
-  others: Record<Exclude<CaptureSteps, 'complete'>, TitleLocale>
-} = {
+export const DOC_VIDEO_INSTRUCTIONS_MAPPING: Record<
+  CaptureFlows,
+  Record<CaptureSteps, InstructionLocale>
+> = {
   passport: {
     intro: {
-      title: 'doc_video_capture.instructions.passport.intro_title',
-      subtitle: '',
+      title: 'doc_video_capture.header_passport',
+      button: 'video_capture.button_primary_start',
     },
     front: {
-      title: 'doc_video_capture.instructions.passport.front_title',
-      subtitle: 'doc_video_capture.instructions.passport.front_subtitle',
-    },
-    tilt: {
-      title: 'doc_video_capture.instructions.passport.tilt_title',
-      subtitle: 'doc_video_capture.instructions.passport.tilt_subtitle',
-    },
-  },
-  others: {
-    intro: {
-      title: 'doc_video_capture.instructions.others.intro_title',
-      subtitle: '',
-    },
-    front: {
-      title: 'doc_video_capture.instructions.others.front_title',
-      subtitle: 'doc_video_capture.instructions.others.front_subtitle',
-    },
-    tilt: {
-      title: 'doc_video_capture.instructions.others.tilt_title',
-      subtitle: 'doc_video_capture.instructions.others.tilt_subtitle',
+      title: 'doc_video_capture.header_step1',
+      button: 'doc_video_capture.button_primary_fallback',
     },
     back: {
-      title: 'doc_video_capture.instructions.others.back_title',
-      subtitle: 'doc_video_capture.instructions.others.back_subtitle',
+      title: '',
+      button: '',
+    },
+  },
+  cardId: {
+    intro: {
+      title: 'doc_video_capture.header',
+      button: 'video_capture.button_primary_start',
+    },
+    front: {
+      title: 'doc_video_capture.header_step1',
+      button: 'doc_video_capture.button_primary_fallback',
+    },
+    back: {
+      title: 'doc_video_capture.header_step2',
+      subtitle: 'doc_video_capture.detail_step2',
+      button: 'doc_video_capture.button_primary_fallback_end',
+    },
+  },
+  paperId: {
+    intro: {
+      title: 'doc_capture.header_folded_doc_front',
+      subtitle: 'doc_capture.detail.folded_doc_front',
+      button: 'video_capture.button_primary_start',
+    },
+    front: {
+      title: 'doc_video_capture.header_step1',
+      button: 'doc_video_capture.button_primary_fallback',
+    },
+    back: {
+      title: 'doc_video_capture.header_paper_doc_step2',
+      subtitle: 'doc_video_capture.detail_step2',
+      button: 'doc_video_capture.button_primary_fallback_end',
     },
   },
 }

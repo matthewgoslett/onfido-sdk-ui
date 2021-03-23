@@ -14,9 +14,12 @@ import VideoCapture, { Props as VideoCaptureProps } from '../../VideoCapture'
 
 import DocumentVideo, { Props as DocumentVideoProps } from '../index'
 
+import type { CountryData } from '~types/commons'
+import type { CaptureFlows } from '~types/docVideo'
 import type { DocumentTypes } from '~types/steps'
 
-jest.mock('../../utils')
+jest.mock('~utils')
+navigator.vibrate = jest.fn()
 
 const defaultProps: DocumentVideoProps = {
   cameraClassName: 'fakeCameraClass',
@@ -26,18 +29,39 @@ const defaultProps: DocumentVideoProps = {
   trackScreen: jest.fn(),
 }
 
-const simulateCaptureClick = (
+const waitForTimeout = (
   wrapper: ReactWrapper,
-  waitForSuccessTimedOut = true
+  type: 'button' | 'holding' | 'success' | 'recording',
+  forceRerender = false
 ) => {
-  const button = wrapper.find('VideoLayer Button > button')
-  button.simulate('click')
+  switch (type) {
+    case 'button':
+      jest.runTimersToTime(3000)
+      break
+    case 'holding':
+      jest.runTimersToTime(6000)
+      break
+    case 'success':
+      jest.runTimersToTime(2000)
+      break
+    case 'recording':
+      jest.runTimersToTime(30_000)
+      break
+    default:
+      break
+  }
 
-  if (waitForSuccessTimedOut) {
-    jest.runTimersToTime(2000)
-    wrapper.update()
+  wrapper.update()
+
+  if (forceRerender) {
+    // Force rerender to trigger useEffect in DocumentVideo
+    // https://github.com/enzymejs/enzyme/issues/2091#issuecomment-486680844
+    wrapper.setProps({})
   }
 }
+
+const simulateButtonClick = (wrapper: ReactWrapper) =>
+  wrapper.find({ 'data-onfido-qa': 'doc-video-capture-btn' }).simulate('click')
 
 const assertOverlay = (
   wrapper: ReactWrapper,
@@ -46,12 +70,14 @@ const assertOverlay = (
 ) => {
   const documentOverlay = wrapper.find<DocumentOverlayProps>(DocumentOverlay)
   expect(documentOverlay.exists()).toBeTruthy()
-  expect(documentOverlay.props().type).toEqual(documentType)
+  expect(documentOverlay.props().documentType).toEqual(documentType)
   expect(documentOverlay.props().withPlaceholder).toEqual(withPlaceholder)
 }
 
 const assertRecordingButton = (wrapper: ReactWrapper, text: string) => {
-  const recordingButton = wrapper.find('VideoLayer Button')
+  const recordingButton = wrapper.find({
+    'data-onfido-qa': 'doc-video-capture-btn',
+  })
   expect(recordingButton.exists()).toBeTruthy()
   expect(recordingButton.prop('disabled')).toBeFalsy()
   expect(recordingButton.text()).toEqual(text)
@@ -61,6 +87,7 @@ const assertIntroStep = (
   wrapper: ReactWrapper,
   forSingleSidedDocs: boolean
 ) => {
+  expect(wrapper.find('PaperIdFlowSelector').exists()).toBeFalsy()
   const videoCapture = wrapper.find<VideoCaptureProps>(VideoCapture)
   expect(videoCapture.exists()).toBeTruthy()
 
@@ -86,75 +113,47 @@ const assertIntroStep = (
   trackScreen('fake_screen_tracking')
   expect(defaultProps.trackScreen).toHaveBeenCalledWith('fake_screen_tracking')
 
-  assertRecordingButton(wrapper, 'doc_video_capture.button_start')
+  assertRecordingButton(wrapper, 'video_capture.button_primary_start')
 
   const instructions = wrapper.find('VideoLayer Instructions')
   expect(instructions.exists()).toBeTruthy()
 
   if (forSingleSidedDocs) {
     expect(instructions.props()).toMatchObject({
-      title: 'doc_video_capture.instructions.passport.intro_title',
+      title: 'doc_video_capture.header_passport',
     })
   } else {
     expect(instructions.props()).toMatchObject({
-      title: 'doc_video_capture.instructions.others.intro_title',
+      title: 'doc_video_capture.header',
     })
   }
 }
 
-const assertFrontStep = (
-  wrapper: ReactWrapper,
-  forSingleSidedDocs: boolean
-) => {
-  assertRecordingButton(wrapper, 'doc_video_capture.button_record')
-
-  const instructions = wrapper.find('VideoLayer Instructions')
-  expect(instructions.exists()).toBeTruthy()
-
-  if (forSingleSidedDocs) {
-    expect(instructions.props()).toMatchObject({
-      title: 'doc_video_capture.instructions.passport.front_title',
-      subtitle: 'doc_video_capture.instructions.passport.front_subtitle',
-    })
-  } else {
-    expect(instructions.props()).toMatchObject({
-      title: 'doc_video_capture.instructions.others.front_title',
-      subtitle: 'doc_video_capture.instructions.others.front_subtitle',
-    })
-  }
-}
-
-const assertTiltStep = (wrapper: ReactWrapper, forSingleSidedDocs: boolean) => {
-  assertRecordingButton(wrapper, 'doc_video_capture.button_next')
-
-  const instructions = wrapper.find('VideoLayer Instructions')
-  expect(instructions.exists()).toBeTruthy()
-
-  if (forSingleSidedDocs) {
-    expect(instructions.props()).toMatchObject({
-      icon: 'tilt',
-      title: 'doc_video_capture.instructions.passport.tilt_title',
-      subtitle: 'doc_video_capture.instructions.passport.tilt_subtitle',
-    })
-  } else {
-    expect(instructions.props()).toMatchObject({
-      icon: 'tilt',
-      title: 'doc_video_capture.instructions.others.tilt_title',
-      subtitle: 'doc_video_capture.instructions.others.tilt_subtitle',
-    })
-  }
-}
-
-const assertBackStep = (wrapper: ReactWrapper) => {
-  assertRecordingButton(wrapper, 'doc_video_capture.button_stop')
+const assertFirstStep = (wrapper: ReactWrapper) => {
+  waitForTimeout(wrapper, 'button')
+  assertRecordingButton(wrapper, 'doc_video_capture.button_primary_fallback')
 
   const instructions = wrapper.find('VideoLayer Instructions')
   expect(instructions.exists()).toBeTruthy()
 
   expect(instructions.props()).toMatchObject({
-    icon: 'back',
-    title: 'doc_video_capture.instructions.others.back_title',
-    subtitle: 'doc_video_capture.instructions.others.back_subtitle',
+    title: 'doc_video_capture.header_step1',
+  })
+}
+
+const assertSecondStep = (wrapper: ReactWrapper) => {
+  waitForTimeout(wrapper, 'button')
+  assertRecordingButton(
+    wrapper,
+    'doc_video_capture.button_primary_fallback_end'
+  )
+
+  const instructions = wrapper.find('VideoLayer Instructions')
+  expect(instructions.exists()).toBeTruthy()
+
+  expect(instructions.props()).toMatchObject({
+    title: 'doc_video_capture.header_step2',
+    subtitle: 'doc_video_capture.detail_step2',
   })
 }
 
@@ -188,7 +187,7 @@ describe('DocumentVideo', () => {
       assertOverlay(wrapper, 'driving_licence', true))
 
     describe('when recording', () => {
-      beforeEach(() => simulateCaptureClick(wrapper, false))
+      beforeEach(() => simulateButtonClick(wrapper))
 
       it('sets correct timeout', () => {
         const timeout = wrapper.find('Timeout')
@@ -197,38 +196,41 @@ describe('DocumentVideo', () => {
 
       describe('when inactive timed out', () => {
         beforeEach(() => {
-          jest.runTimersToTime(30_000)
-          wrapper.update()
+          waitForTimeout(wrapper, 'recording')
         })
 
         it('handles redo fallback correctly', () => {
-          wrapper.find<FallbackButtonProps>(FallbackButton).props().onClick()
-          wrapper.update()
+          const fallbackButton = wrapper.find<FallbackButtonProps>(
+            FallbackButton
+          )
+          const onClick = fallbackButton?.props().onClick
+          onClick && onClick()
+          wrapper.setProps({})
 
-          assertRecordingButton(wrapper, 'doc_video_capture.button_start')
+          assertRecordingButton(wrapper, 'video_capture.button_primary_start')
         })
       })
 
       it('starts recording correctly', () => {
         assertOverlay(wrapper, 'driving_licence', false)
-        assertFrontStep(wrapper, false)
+        assertFirstStep(wrapper)
       })
 
-      it('moves to the tilt step correctly', () => {
-        simulateCaptureClick(wrapper) // front -> tilt
-        assertTiltStep(wrapper, false)
+      it('moves to the second step correctly', () => {
+        waitForTimeout(wrapper, 'button')
+        simulateButtonClick(wrapper)
+        waitForTimeout(wrapper, 'success', true)
+        assertSecondStep(wrapper)
       })
 
-      it('moves to the back step correctly', () => {
-        simulateCaptureClick(wrapper) // front -> tilt
-        simulateCaptureClick(wrapper) // tilt -> back
-        assertBackStep(wrapper)
-      })
+      it('ends the flow with back side captured', () => {
+        waitForTimeout(wrapper, 'button')
+        simulateButtonClick(wrapper)
+        waitForTimeout(wrapper, 'success', true)
 
-      it('switches to the back document capture step', () => {
-        simulateCaptureClick(wrapper) // front -> tilt
-        simulateCaptureClick(wrapper) // tilt -> back
-        simulateCaptureClick(wrapper) // back -> done
+        waitForTimeout(wrapper, 'button')
+        simulateButtonClick(wrapper)
+        waitForTimeout(wrapper, 'success', true)
 
         expect(defaultProps.onCapture).toHaveBeenCalledWith({
           front: {
@@ -248,7 +250,7 @@ describe('DocumentVideo', () => {
     })
   })
 
-  describe('with single-sided documents', () => {
+  describe('with passports', () => {
     beforeEach(() => {
       wrapper = mount(
         <MockedReduxProvider>
@@ -263,21 +265,18 @@ describe('DocumentVideo', () => {
       assertIntroStep(wrapper, true))
 
     describe('when recording', () => {
-      beforeEach(() => simulateCaptureClick(wrapper, false))
+      beforeEach(() => simulateButtonClick(wrapper))
 
       it('starts recording correctly', () => {
         assertOverlay(wrapper, 'passport', false)
-        assertFrontStep(wrapper, true)
-      })
-
-      it('moves to the tilt step correctly', () => {
-        simulateCaptureClick(wrapper) // front -> tilt
-        assertTiltStep(wrapper, true)
+        assertFirstStep(wrapper)
       })
 
       it('ends the flow without capturing back side', () => {
-        simulateCaptureClick(wrapper) // front -> tilt
-        simulateCaptureClick(wrapper) // tilt -> done
+        waitForTimeout(wrapper, 'button')
+        simulateButtonClick(wrapper)
+        waitForTimeout(wrapper, 'holding', true)
+        waitForTimeout(wrapper, 'success', true)
 
         expect(defaultProps.onCapture).toHaveBeenCalledWith({
           front: {
@@ -288,6 +287,96 @@ describe('DocumentVideo', () => {
             ...fakeCapturePayload('video'),
             filename: 'document_video.webm',
           },
+        })
+      })
+    })
+  })
+
+  describe('with paper IDs', () => {
+    const paperIdCases: Array<{
+      documentType: DocumentTypes
+      idDocumentIssuingCountry: CountryData
+    }> = [
+      {
+        documentType: 'driving_licence',
+        idDocumentIssuingCountry: {
+          name: 'France',
+          country_alpha2: 'FR',
+          country_alpha3: 'FRA',
+        },
+      },
+      {
+        documentType: 'national_identity_card',
+        idDocumentIssuingCountry: {
+          name: 'Italy',
+          country_alpha2: 'IT',
+          country_alpha3: 'ITA',
+        },
+      },
+    ]
+
+    paperIdCases.forEach(({ documentType, idDocumentIssuingCountry }) => {
+      describe(`for ${idDocumentIssuingCountry.name} ${documentType}`, () => {
+        const possibleFlows: CaptureFlows[] = ['cardId', 'paperId']
+
+        const simulateFlowClick = (
+          wrapper: ReactWrapper,
+          flow: CaptureFlows
+        ) => {
+          const button = wrapper.find(`PaperIdFlowSelector .${flow}`)
+          button.simulate('click')
+        }
+
+        beforeEach(() => {
+          wrapper = mount(
+            <MockedReduxProvider overrideGlobals={{ idDocumentIssuingCountry }}>
+              <MockedLocalised>
+                <DocumentVideo {...defaultProps} documentType={documentType} />
+              </MockedLocalised>
+            </MockedReduxProvider>
+          )
+        })
+
+        it('renders the flow selection by default', () => {
+          expect(wrapper.find('PaperIdFlowSelector').exists()).toBeTruthy()
+          expect(wrapper.find(VideoCapture).exists()).toBeFalsy()
+        })
+
+        possibleFlows.forEach((flow) => {
+          describe(`when select ${flow} flow`, () => {
+            beforeEach(() => simulateFlowClick(wrapper, flow))
+
+            it('starts flow correctly', () => {
+              expect(wrapper.find('PaperIdFlowSelector').exists()).toBeFalsy()
+              expect(wrapper.find(VideoCapture).exists()).toBeTruthy()
+            })
+
+            it('ends the flow with back side captured', () => {
+              simulateButtonClick(wrapper)
+              waitForTimeout(wrapper, 'button')
+              simulateButtonClick(wrapper)
+              waitForTimeout(wrapper, 'success', true)
+
+              waitForTimeout(wrapper, 'button')
+              simulateButtonClick(wrapper)
+              waitForTimeout(wrapper, 'success', true)
+
+              expect(defaultProps.onCapture).toHaveBeenCalledWith({
+                front: {
+                  ...fakeCapturePayload('standard'),
+                  filename: 'document_front.jpeg',
+                },
+                video: {
+                  ...fakeCapturePayload('video'),
+                  filename: 'document_video.webm',
+                },
+                back: {
+                  ...fakeCapturePayload('standard'),
+                  filename: 'document_back.jpeg',
+                },
+              })
+            })
+          })
         })
       })
     })

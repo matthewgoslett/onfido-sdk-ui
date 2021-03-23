@@ -12,8 +12,9 @@ import VideoCapture, {
 
 import type { CameraProps } from '~types/camera'
 import type { CaptureMethods } from '~types/commons'
+import type { WithTrackingProps } from '~types/hocs'
 
-jest.mock('../../utils')
+jest.mock('~utils')
 
 const assertTimeout = (wrapper: ReactWrapper, seconds: number) => {
   const timeout = wrapper.find('Timeout')
@@ -44,7 +45,7 @@ const assertInactiveError = (
 
   if (method === 'document') {
     expect(wrapper.find('FallbackButton').text()).toEqual(
-      'doc_video_capture.alert.timeout.detail'
+      'doc_video_capture.prompt.detail_timeout'
     )
   } else {
     expect(wrapper.find('FallbackButton').text()).toEqual(
@@ -75,7 +76,7 @@ const defaultProps: VideoCaptureProps = {
   onRedo: jest.fn(),
   onVideoCapture: jest.fn(),
   renderFallback: jest.fn(),
-  renderVideoLayer: MockedVideoLayer,
+  renderVideoLayer: (props) => <MockedVideoLayer {...props} />, // eslint-disable-line react/display-name
   trackScreen: jest.fn(),
 }
 
@@ -95,7 +96,7 @@ describe('VideoCapture', () => {
 
   describe('when mounted', () => {
     let wrapper: ReactWrapper
-    let camera: ReactWrapper<CameraProps>
+    let camera: ReactWrapper<CameraProps & WithTrackingProps>
 
     beforeEach(() => {
       wrapper = mount(
@@ -106,7 +107,7 @@ describe('VideoCapture', () => {
         </MockedReduxProvider>
       )
 
-      camera = wrapper.find<CameraProps>(Camera)
+      camera = wrapper.find<CameraProps & WithTrackingProps>(Camera)
     })
 
     it('renders Camera correctly', () => {

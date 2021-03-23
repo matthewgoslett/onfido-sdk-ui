@@ -17,7 +17,7 @@ export declare type DocumentTypes = "passport" | "driving_licence" | "national_i
 export declare type PoaTypes = "bank_building_society_statement" | "utility_bill" | "council_tax" | "benefit_letters" | "government_letter";
 export declare type RequestedVariant = "standard" | "video";
 export declare type DocumentTypeConfig = boolean | {
-	country: string;
+	country: string | null;
 };
 export declare type CaptureOptions = {
 	requestedVariant?: RequestedVariant;
@@ -47,31 +47,81 @@ export declare type StepOptionComplete = {
 	message?: string;
 	submessage?: string;
 };
-export declare type StepConfigWelcome = {
-	type: typeof STEP_WELCOME;
-	options?: StepOptionWelcome;
+export declare type StepOptionsMap = {
+	welcome: StepOptionWelcome;
+	userConsent: never;
+	document: StepOptionDocument;
+	poa: StepOptionPoA;
+	face: StepOptionFace;
+	complete: StepOptionComplete;
 };
-export declare type StepConfigUserConsent = {
-	type: typeof STEP_USER_CONSENT;
-	options?: never;
+export declare type StepConfigMap = {
+	[Type in StepTypes]: {
+		type: Type;
+		options?: StepOptionsMap[Type];
+	};
 };
-export declare type StepConfigDocument = {
-	type: typeof STEP_DOCUMENT;
-	options?: StepOptionDocument;
+export declare type StepConfigWelcome = StepConfigMap["welcome"];
+export declare type StepConfigUserConsent = StepConfigMap["userConsent"];
+export declare type StepConfigDocument = StepConfigMap["document"];
+export declare type StepConfigPoa = StepConfigMap["poa"];
+export declare type StepConfigFace = StepConfigMap["face"];
+export declare type StepConfigComplete = StepConfigMap["complete"];
+export declare type StepConfig = StepConfigWelcome | StepConfigUserConsent | StepConfigDocument | StepConfigPoa | StepConfigFace | StepConfigComplete;
+export declare type UICustomizationOptions = {
+	colorBackgroundSurfaceModal?: string;
+	colorBorderSurfaceModal?: string;
+	borderWidthSurfaceModal?: string;
+	borderStyleSurfaceModal?: string;
+	fontFamilyTitle?: string;
+	fontSizeTitle?: string;
+	fontWeightTitle?: number;
+	colorContentTitle?: string;
+	fontFamilySubtitle?: string;
+	fontSizeSubtitle?: string;
+	fontWeightSubtitle?: number;
+	colorContentSubtitle?: string;
+	fontFamilyBody?: string;
+	fontSizeBody?: string;
+	fontWeightBody?: number;
+	colorContentBody?: string;
+	colorContentButtonPrimaryText?: string;
+	colorBackgroundButtonPrimary?: string;
+	colorBackgroundButtonPrimaryHover?: string;
+	colorBackgroundButtonPrimaryActive?: string;
+	colorBorderButtonPrimary?: string;
+	colorContentButtonSecondaryText?: string;
+	colorBackgroundButtonSecondary?: string;
+	colorBackgroundButtonSecondaryHover?: string;
+	colorBackgroundButtonSecondaryActive?: string;
+	colorBorderButtonSecondary?: string;
+	borderRadiusButton?: string;
+	buttonGroupStacked?: boolean;
+	colorContentDocTypeButton?: string;
+	colorBackgroundDocTypeButton?: string;
+	colorBorderDocTypeButton?: string;
+	colorBorderDocTypeButtonHover?: string;
+	colorBorderDocTypeButtonActive?: string;
+	colorBackgroundIcon?: string;
+	colorBorderLinkUnderline?: string;
+	colorContentLinkTextHover?: string;
+	colorBackgroundLinkHover?: string;
+	colorBackgroundLinkActive?: string;
+	colorContentAlertInfo?: string;
+	colorBackgroundAlertInfo?: string;
+	colorBackgroundAlertInfoLinkHover?: string;
+	colorBackgroundAlertInfoLinkActive?: string;
+	colorContentAlertError?: string;
+	colorBackgroundAlertError?: string;
+	colorBackgroundAlertErrorLinkHover?: string;
+	colorBackgroundAlertErrorLinkActive?: string;
+	colorBackgroundInfoPill?: string;
+	colorContentInfoPill?: string;
+	colorBackgroundButtonIconHover?: string;
+	colorBackgroundButtonIconActive?: string;
+	colorBackgroundButtonCameraHover?: string;
+	colorBackgroundButtonCameraActive?: string;
 };
-export declare type StepConfigPoA = {
-	type: typeof STEP_POA;
-	options?: StepOptionPoA;
-};
-export declare type StepConfigFace = {
-	type: typeof STEP_FACE;
-	options?: StepOptionFace;
-};
-export declare type StepConfigComplete = {
-	type: typeof STEP_COMPLETE;
-	options?: StepOptionComplete;
-};
-export declare type StepConfig = StepConfigWelcome | StepConfigUserConsent | StepConfigDocument | StepConfigPoA | StepConfigFace | StepConfigComplete;
 export declare type DocumentSides = "front" | "back";
 export declare type UploadFileResponse = {
 	id: string;
@@ -122,7 +172,7 @@ export declare type DocumentImageResponse = {
 	applicant_id: string;
 	type: DocumentTypes | PoaTypes;
 	side: DocumentSides;
-	issuing_country?: string;
+	issuing_country: string | null | undefined;
 	sdk_warnings: ImageQualityWarnings;
 } & UploadFileResponse;
 declare const CHALLENGE_RECITE = "recite";
@@ -145,6 +195,9 @@ export declare type FaceVideoResponse = {
 export declare type EnterpriseCobranding = {
 	text: string;
 };
+export declare type EnterpriseLogoCobranding = {
+	src: string;
+};
 export declare type EnterpriseCallbackResponse = {
 	continueWithOnfidoSubmission?: boolean;
 	onfidoSuccess?: DocumentImageResponse | UploadFileResponse | FaceVideoResponse;
@@ -152,6 +205,7 @@ export declare type EnterpriseCallbackResponse = {
 export declare type EnterpriseFeatures = {
 	hideOnfidoLogo?: boolean;
 	cobrand?: EnterpriseCobranding;
+	logoCobrand?: EnterpriseLogoCobranding;
 	useCustomizedApiRequests?: boolean;
 	onSubmitDocument?: (data: FormData) => Promise<EnterpriseCallbackResponse>;
 	onSubmitSelfie?: (data: FormData) => Promise<EnterpriseCallbackResponse>;
@@ -203,8 +257,10 @@ export interface SdkOptions extends FunctionalConfigurations {
 	};
 	steps?: Array<StepTypes | StepConfig>;
 	enterpriseFeatures?: EnterpriseFeatures;
+	customUI?: UICustomizationOptions | null;
 }
 export declare type SdkHandle = {
+	containerId?: string;
 	options: SdkOptions;
 	setOptions(options: SdkOptions): void;
 	tearDown(): void;

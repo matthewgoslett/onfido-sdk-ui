@@ -5,7 +5,7 @@ import App from '../index'
 import type { NormalisedSdkOptions } from '~types/commons'
 
 jest.mock('Tracker/safeWoopra')
-jest.mock('../../utils')
+jest.mock('~utils')
 
 const defaultOptions: NormalisedSdkOptions = {
   steps: [
@@ -18,7 +18,7 @@ const defaultOptions: NormalisedSdkOptions = {
 
 describe('App', () => {
   it('renders without crashing', () => {
-    const wrapper = shallow(<App options={{}} />)
+    const wrapper = shallow(<App options={defaultOptions} />)
     expect(wrapper.exists()).toBeTruthy()
   })
 

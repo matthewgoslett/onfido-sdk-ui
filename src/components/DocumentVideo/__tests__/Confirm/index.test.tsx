@@ -1,6 +1,7 @@
 import { h } from 'preact'
 import { mount, ReactWrapper } from 'enzyme'
 
+import { SdkOptionsProvider } from '~contexts/useSdkOptions'
 import MockedLocalised from '~jest/MockedLocalised'
 import MockedReduxProvider, {
   mockedReduxProps,
@@ -8,39 +9,21 @@ import MockedReduxProvider, {
 } from '~jest/MockedReduxProvider'
 import { fakeDocumentCaptureState } from '~jest/captures'
 import {
-  fakePassportImageResponse,
-  fakePassportVideoResponse,
-  fakeDrivingLicenceFrontResponse,
-  fakeDrivingLicenceBackResponse,
-  fakeDrivingLicenceVideoResponse,
   fakeCreateV4DocumentResponse,
-  fakeNoDocumentError,
-  fakeUnknownError,
   fakeAccessDeniedError,
 } from '~jest/responses'
-import {
-  uploadDocument,
-  uploadDocumentVideo,
-  uploadBinaryMedia,
-  createV4Document,
-} from '~utils/onfidoApi'
-import Confirm from '../Confirm'
+import { uploadBinaryMedia, createV4Document } from '~utils/onfidoApi'
+import Confirm from '../../Confirm'
 
-import type { ApiParsedError } from '~types/api'
+import type { NarrowSdkOptions } from '~types/commons'
 import type { StepComponentDocumentProps } from '~types/routers'
 
-jest.mock('../../utils/objectUrl')
-jest.mock('../../utils/onfidoApi')
+jest.mock('~utils/objectUrl')
+jest.mock('~utils/onfidoApi')
 
 const fakeUrl = 'https://fake-api.onfido.com'
 const fakeToken = 'fake-sdk-token'
 
-const mockedUploadDocument = uploadDocument as jest.MockedFunction<
-  typeof uploadDocument
->
-const mockedUploadDocumentVideo = uploadDocumentVideo as jest.MockedFunction<
-  typeof uploadDocumentVideo
->
 const mockedUploadBinaryMedia = uploadBinaryMedia as jest.MockedFunction<
   typeof uploadBinaryMedia
 >
@@ -49,6 +32,11 @@ const mockedCreateV4Document = createV4Document as jest.MockedFunction<
 >
 
 const runAllPromises = () => new Promise(setImmediate)
+
+const defaultOptions: NarrowSdkOptions = {
+  steps: [{ type: 'welcome' }, { type: 'document' }],
+  token: fakeToken,
+}
 
 const defaultProps: StepComponentDocumentProps = {
   allowCrossDeviceFlow: true,
@@ -60,31 +48,55 @@ const defaultProps: StepComponentDocumentProps = {
   resetSdkFocus: jest.fn(),
   step: 0,
   stepIndexType: 'user',
+  steps: [{ type: 'document' }],
   trackScreen: jest.fn(),
   triggerOnError: jest.fn(),
   ...mockedReduxProps,
 }
 
-const simulateButtonClick = (wrapper: ReactWrapper, primary = true) =>
-  wrapper
-    .find(`button.button-${primary ? 'primary' : 'secondary'}`)
-    .simulate('click')
+type ButtonVariants = 'primary' | 'secondary'
+
+const findButton = (wrapper: ReactWrapper, buttonVariant: ButtonVariants) =>
+  wrapper.find({
+    'data-onfido-qa': `doc-video-confirm-${buttonVariant}-btn`,
+  })
+
+const simulateButtonClick = (
+  wrapper: ReactWrapper,
+  buttonVariant: ButtonVariants
+) => findButton(wrapper, buttonVariant).simulate('click')
 
 const assertButton = (
   wrapper: ReactWrapper,
-  buttonClass: string,
-  buttonText: string
+  buttonVariant: ButtonVariants,
+  buttonFunction: 'upload' | 'preview' | 'redo'
 ) => {
-  const button = wrapper.find(`button.${buttonClass}`)
+  const button = findButton(wrapper, buttonVariant)
   expect(button.exists()).toBeTruthy()
-  expect(button.text()).toEqual(buttonText)
-  expect(button.hasClass('button-lg button-centered')).toBeTruthy()
+  expect(button.hasClass('button-centered button-lg')).toBeTruthy()
+
+  switch (buttonFunction) {
+    case 'upload':
+      expect(button.text()).toEqual('video_confirmation.button_primary')
+      break
+
+    case 'preview':
+      expect(button.text()).toEqual('doc_video_confirmation.button_secondary')
+      break
+
+    case 'redo':
+      expect(button.text()).toEqual('video_confirmation.button_secondary')
+      break
+
+    default:
+      break
+  }
 }
 
 const assertError = (wrapper: ReactWrapper, noDoc = false) => {
   expect(wrapper.find('.content').exists()).toBeFalsy()
   expect(wrapper.find('.preview').exists()).toBeFalsy()
-  expect(wrapper.find('button.button-primary').exists()).toBeTruthy()
+  expect(findButton(wrapper, 'primary')).toBeTruthy()
 
   expect(wrapper.find('Error').exists()).toBeTruthy()
 
@@ -104,12 +116,8 @@ const assertError = (wrapper: ReactWrapper, noDoc = false) => {
     )
   }
 
-  assertButton(
-    wrapper,
-    'button-secondary',
-    'doc_video_confirmation.button_redo'
-  )
-  simulateButtonClick(wrapper, false)
+  assertButton(wrapper, 'secondary', 'redo')
+  simulateButtonClick(wrapper, 'secondary')
   expect(defaultProps.previousStep).toHaveBeenCalled()
 }
 
@@ -119,15 +127,21 @@ const assertContent = (
 ) => {
   expect(wrapper.find('Spinner').exists()).toBeFalsy()
   expect(wrapper.find('Error').exists()).toBeFalsy()
-  expect(wrapper.find('button.button-primary').exists()).toBeTruthy()
-  expect(wrapper.find('button.button-secondary').exists()).toBeTruthy()
+  expect(
+    wrapper.find({ 'data-onfido-qa': 'doc-video-confirm-primary-btn' }).exists()
+  ).toBeTruthy()
+  expect(
+    wrapper
+      .find({ 'data-onfido-qa': 'doc-video-confirm-secondary-btn' })
+      .exists()
+  ).toBeTruthy()
 
   if (variant === 'preview') {
     expect(wrapper.find('.content').exists()).toBeFalsy()
 
     expect(wrapper.find('.preview').exists()).toBeTruthy()
     expect(wrapper.find('.preview > .title').text()).toEqual(
-      'doc_video_confirmation.preview_title'
+      'doc_video_confirmation.title'
     )
     expect(wrapper.find('.preview > CaptureViewer').exists()).toBeTruthy()
     return
@@ -136,11 +150,9 @@ const assertContent = (
   // Default
   expect(wrapper.find('.content').exists()).toBeTruthy()
   expect(wrapper.find('.content > .icon').exists()).toBeTruthy()
-  expect(wrapper.find('.content > .title').text()).toEqual(
-    'doc_video_confirmation.title'
-  )
+  expect(wrapper.find('.content > .title').text()).toEqual('outro.body')
   expect(wrapper.find('.content > .body').text()).toEqual(
-    'doc_video_confirmation.body'
+    'video_confirmation.body'
   )
   expect(wrapper.find('.preview').exists()).toBeFalsy()
 }
@@ -149,8 +161,8 @@ const assertSpinner = (wrapper: ReactWrapper) => {
   expect(wrapper.find('Spinner').exists()).toBeTruthy()
   expect(wrapper.find('.content').exists()).toBeFalsy()
   expect(wrapper.find('CaptureViewer').exists()).toBeFalsy()
-  expect(wrapper.find('button.button-primary').exists()).toBeFalsy()
-  expect(wrapper.find('button.button-secondary').exists()).toBeFalsy()
+  expect(findButton(wrapper, 'primary').exists()).toBeFalsy()
+  expect(findButton(wrapper, 'secondary').exists()).toBeFalsy()
 }
 
 describe('DocumentVideo', () => {
@@ -160,12 +172,19 @@ describe('DocumentVideo', () => {
 
     beforeEach(() => {
       jest.useFakeTimers()
+      const fakeVideoPayload = fakeDocumentCaptureState('passport', 'video')
 
       wrapper = mount(
-        <MockedReduxProvider>
-          <MockedLocalised>
-            <Confirm {...defaultProps} />
-          </MockedLocalised>
+        <MockedReduxProvider
+          overrideCaptures={{
+            document_video: fakeVideoPayload,
+          }}
+        >
+          <SdkOptionsProvider options={defaultOptions}>
+            <MockedLocalised>
+              <Confirm {...defaultProps} />
+            </MockedLocalised>
+          </SdkOptionsProvider>
         </MockedReduxProvider>
       )
     })
@@ -177,18 +196,67 @@ describe('DocumentVideo', () => {
 
     it('renders items correctly', () => {
       assertContent(wrapper, 'default')
+      assertButton(wrapper, 'primary', 'upload')
+      assertButton(wrapper, 'secondary', 'preview')
+    })
 
-      assertButton(
-        wrapper,
-        'button-primary',
-        'doc_video_confirmation.button_upload'
+    describe('with missing captures', () => {
+      const fakeDocumentType = 'passport'
+      const fakeFrontPayload = fakeDocumentCaptureState(
+        fakeDocumentType,
+        'standard',
+        'front'
+      )
+      const fakeVideoPayload = fakeDocumentCaptureState(
+        fakeDocumentType,
+        'video'
       )
 
-      assertButton(
-        wrapper,
-        'button-secondary',
-        'doc_video_confirmation.button_preview'
-      )
+      const possibleCases = [
+        {
+          missingCapture: 'front',
+          captures: {
+            document_video: fakeVideoPayload,
+          },
+          message: 'Front document not captured',
+        },
+        {
+          missingCapture: 'video',
+          captures: {
+            document_front: fakeFrontPayload,
+          },
+          message: 'Document video not captured',
+        },
+      ]
+
+      beforeEach(() => {
+        console.error = jest.fn()
+      })
+
+      possibleCases.forEach(({ missingCapture, captures, message }) => {
+        it(`raises error and stop submitting with missing ${missingCapture}`, () => {
+          wrapper = mount(
+            <MockedReduxProvider
+              overrideCaptures={captures}
+              overrideGlobals={{
+                urls: {
+                  auth_url: fakeUrl,
+                },
+              }}
+              storeRef={(store) => (mockedStore = store)}
+            >
+              <SdkOptionsProvider options={defaultOptions}>
+                <MockedLocalised>
+                  <Confirm {...defaultProps} />
+                </MockedLocalised>
+              </SdkOptionsProvider>
+            </MockedReduxProvider>
+          )
+          simulateButtonClick(wrapper, 'primary')
+
+          expect(console.error).toHaveBeenCalledWith(message)
+        })
+      })
     })
 
     describe('with passport captures', () => {
@@ -212,110 +280,33 @@ describe('DocumentVideo', () => {
             }}
             overrideGlobals={{
               urls: {
-                onfido_api_url: fakeUrl,
+                auth_url: fakeUrl,
               },
             }}
             storeRef={(store) => (mockedStore = store)}
           >
-            <MockedLocalised>
-              <Confirm
-                {...defaultProps}
-                documentType={fakeDocumentType}
-                token={fakeToken}
-              />
-            </MockedLocalised>
+            <SdkOptionsProvider options={defaultOptions}>
+              <MockedLocalised>
+                <Confirm {...defaultProps} />
+              </MockedLocalised>
+            </SdkOptionsProvider>
           </MockedReduxProvider>
         )
       })
 
       it('shows capture viewer when click on preview', () => {
-        simulateButtonClick(wrapper, false)
+        simulateButtonClick(wrapper, 'secondary')
         assertContent(wrapper, 'preview')
-
-        assertButton(
-          wrapper,
-          'button-secondary',
-          'doc_video_confirmation.button_redo'
-        )
+        assertButton(wrapper, 'secondary', 'redo')
       })
 
       it('goes back when click on redo', () => {
-        simulateButtonClick(wrapper, false) // Preview
-        simulateButtonClick(wrapper, false) // Redo
+        simulateButtonClick(wrapper, 'secondary') // Preview
+        simulateButtonClick(wrapper, 'secondary') // Redo
         expect(defaultProps.previousStep).toHaveBeenCalled()
       })
 
-      describe('when upload success - v3 APIs', () => {
-        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true') {
-          return
-        }
-
-        beforeEach(() => {
-          mockedUploadDocument.mockResolvedValue(fakePassportImageResponse)
-          mockedUploadDocumentVideo.mockResolvedValue(fakePassportVideoResponse)
-          simulateButtonClick(wrapper)
-        })
-
-        it('renders spinner correctly', async () => {
-          assertSpinner(wrapper)
-
-          await runAllPromises()
-
-          expect(mockedUploadDocument).toHaveBeenCalledWith(
-            {
-              file: fakeFrontPayload.blob,
-              sdkMetadata: fakeFrontPayload.sdkMetadata,
-              side: 'front',
-              type: fakeDocumentType,
-              validations: { detect_document: 'error' },
-            },
-            fakeUrl,
-            fakeToken
-          )
-          expect(mockedUploadDocumentVideo).toHaveBeenCalledWith(
-            {
-              blob: fakeVideoPayload.blob,
-              sdkMetadata: fakeVideoPayload.sdkMetadata,
-            },
-            fakeUrl,
-            fakeToken
-          )
-
-          expect(mockedUploadDocument).toHaveBeenCalledTimes(1)
-
-          expect(mockedStore.getActions()).toMatchObject([
-            {
-              type: 'SET_CAPTURE_METADATA',
-              payload: {
-                captureId: fakeFrontPayload.id,
-                metadata: {
-                  id: fakePassportImageResponse.id,
-                  type: fakeDocumentType,
-                  side: 'front',
-                },
-              },
-            },
-            {
-              type: 'SET_CAPTURE_METADATA',
-              payload: {
-                captureId: fakeVideoPayload.id,
-                metadata: {
-                  id: fakePassportVideoResponse.id,
-                  type: fakeDocumentType,
-                },
-              },
-            },
-          ])
-
-          expect(defaultProps.nextStep).toHaveBeenCalled()
-        })
-      })
-
-      describe('when upload success - v4 APIs', () => {
-        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO !== 'true') {
-          return
-        }
-
+      describe('when upload success', () => {
         const imageMediaUuid = 'fake-image-media-id'
         const videoMediaUuid = 'fake-image-media-id'
 
@@ -328,7 +319,7 @@ describe('DocumentVideo', () => {
               media_id: videoMediaUuid,
             })
           mockedCreateV4Document.mockResolvedValue(fakeCreateV4DocumentResponse)
-          simulateButtonClick(wrapper)
+          simulateButtonClick(wrapper, 'primary')
         })
 
         it('renders spinner correctly', async () => {
@@ -418,139 +409,33 @@ describe('DocumentVideo', () => {
                 country_alpha3: 'USA',
               },
               urls: {
-                onfido_api_url: fakeUrl,
+                auth_url: fakeUrl,
               },
             }}
             storeRef={(store) => (mockedStore = store)}
           >
-            <MockedLocalised>
-              <Confirm
-                {...defaultProps}
-                documentType={fakeDocumentType}
-                token={fakeToken}
-              />
-            </MockedLocalised>
+            <SdkOptionsProvider options={defaultOptions}>
+              <MockedLocalised>
+                <Confirm {...defaultProps} />
+              </MockedLocalised>
+            </SdkOptionsProvider>
           </MockedReduxProvider>
         )
       })
 
       it('shows capture viewer when click on preview', () => {
-        simulateButtonClick(wrapper, false)
+        simulateButtonClick(wrapper, 'secondary')
         assertContent(wrapper, 'preview')
-
-        assertButton(
-          wrapper,
-          'button-secondary',
-          'doc_video_confirmation.button_redo'
-        )
+        assertButton(wrapper, 'secondary', 'redo')
       })
 
       it('goes back when click on redo', () => {
-        simulateButtonClick(wrapper, false) // Preview
-        simulateButtonClick(wrapper, false) // Redo
+        simulateButtonClick(wrapper, 'secondary') // Preview
+        simulateButtonClick(wrapper, 'secondary') // Redo
         expect(defaultProps.previousStep).toHaveBeenCalled()
       })
 
-      describe('when upload success - v3 APIs', () => {
-        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true') {
-          return
-        }
-
-        beforeEach(() => {
-          mockedUploadDocument
-            .mockResolvedValueOnce(fakeDrivingLicenceFrontResponse)
-            .mockResolvedValue(fakeDrivingLicenceBackResponse)
-          mockedUploadDocumentVideo.mockResolvedValue(
-            fakeDrivingLicenceVideoResponse
-          )
-          simulateButtonClick(wrapper)
-        })
-
-        it('renders spinner correctly', async () => {
-          assertSpinner(wrapper)
-
-          await runAllPromises()
-
-          expect(mockedUploadDocument).toHaveBeenCalledWith(
-            {
-              file: fakeFrontPayload.blob,
-              issuing_country: 'USA',
-              sdkMetadata: fakeFrontPayload.sdkMetadata,
-              side: 'front',
-              type: fakeDocumentType,
-              validations: { detect_document: 'error' },
-            },
-            fakeUrl,
-            fakeToken
-          )
-          expect(mockedUploadDocument).toHaveBeenCalledWith(
-            {
-              file: fakeBackPayload.blob,
-              issuing_country: 'USA',
-              sdkMetadata: fakeBackPayload.sdkMetadata,
-              side: 'back',
-              type: fakeDocumentType,
-              validations: { detect_document: 'error' },
-            },
-            fakeUrl,
-            fakeToken
-          )
-          expect(mockedUploadDocumentVideo).toHaveBeenCalledWith(
-            {
-              blob: fakeVideoPayload.blob,
-              issuing_country: 'USA',
-              sdkMetadata: fakeVideoPayload.sdkMetadata,
-            },
-            fakeUrl,
-            fakeToken
-          )
-
-          expect(mockedUploadDocument).toHaveBeenCalledTimes(2)
-
-          expect(mockedStore.getActions()).toMatchObject([
-            {
-              type: 'SET_CAPTURE_METADATA',
-              payload: {
-                captureId: fakeFrontPayload.id,
-                metadata: {
-                  id: fakeDrivingLicenceFrontResponse.id,
-                  type: fakeDocumentType,
-                  side: 'front',
-                },
-              },
-            },
-            {
-              type: 'SET_CAPTURE_METADATA',
-              payload: {
-                captureId: fakeBackPayload.id,
-                metadata: {
-                  id: fakeDrivingLicenceBackResponse.id,
-                  type: fakeDocumentType,
-                  side: 'back',
-                },
-              },
-            },
-            {
-              type: 'SET_CAPTURE_METADATA',
-              payload: {
-                captureId: fakeVideoPayload.id,
-                metadata: {
-                  id: fakePassportVideoResponse.id,
-                  type: fakeDocumentType,
-                },
-              },
-            },
-          ])
-
-          expect(defaultProps.nextStep).toHaveBeenCalled()
-        })
-      })
-
-      describe('when upload success - v4 APIs', () => {
-        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO !== 'true') {
-          return
-        }
-
+      describe('when upload success', () => {
         const frontMediaUuid = 'fake-front-media-id'
         const backMediaUuid = 'fake-back-media-id'
         const videoMediaUuid = 'fake-video-media-id'
@@ -567,7 +452,7 @@ describe('DocumentVideo', () => {
               media_id: videoMediaUuid,
             })
           mockedCreateV4Document.mockResolvedValue(fakeCreateV4DocumentResponse)
-          simulateButtonClick(wrapper)
+          simulateButtonClick(wrapper, 'primary')
         })
 
         it('renders spinner correctly', async () => {
@@ -637,83 +522,19 @@ describe('DocumentVideo', () => {
         })
       })
 
-      describe('when upload failed - v3 APIs', () => {
-        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true') {
-          return
-        }
-
-        describe('with no document error', () => {
-          beforeEach(() => {
-            mockedUploadDocument.mockRejectedValue(fakeNoDocumentError)
-            simulateButtonClick(wrapper)
-          })
-
-          it('renders INVALID_CAPTURE error correctly', async () => {
-            await runAllPromises()
-            wrapper.update()
-            assertError(wrapper, true)
-          })
-        })
-
-        describe('with other errors', () => {
-          const blankError = { response: {}, status: 422 }
-
-          const fakeErrors: ApiParsedError[] = [
-            blankError,
-            {
-              ...blankError,
-              response: {
-                error: {
-                  type: 'validation_error',
-                  message: 'Fake message',
-                  fields: {},
-                },
-              },
-            },
-            {
-              ...blankError,
-              response: {
-                error: {
-                  type: 'validation_error',
-                  message: 'Fake message',
-                  fields: { document_detection: null },
-                },
-              },
-            },
-            fakeUnknownError,
-          ]
-
-          fakeErrors.forEach((error) => {
-            describe('on error', () => {
-              beforeEach(() => {
-                mockedUploadDocument.mockRejectedValue(error)
-                simulateButtonClick(wrapper)
-              })
-
-              it('renders REQUEST_ERROR error correctly', async () => {
-                await runAllPromises()
-                wrapper.update()
-                assertError(wrapper)
-              })
-            })
-          })
-        })
-      })
-
-      describe('when upload failed - v4 APIs', () => {
-        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO !== 'true') {
-          return
-        }
-
+      describe('when upload failed', () => {
         beforeEach(() => {
           mockedUploadBinaryMedia.mockRejectedValue(fakeAccessDeniedError)
-          simulateButtonClick(wrapper)
+          simulateButtonClick(wrapper, 'primary')
         })
 
         it('renders REQUEST_ERROR error correctly', async () => {
           await runAllPromises()
           wrapper.update()
           assertError(wrapper, false)
+          expect(defaultProps.triggerOnError).toHaveBeenCalledWith(
+            fakeAccessDeniedError
+          )
         })
       })
     })

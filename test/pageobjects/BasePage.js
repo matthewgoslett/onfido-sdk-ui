@@ -28,8 +28,14 @@ class BasePage {
   async cobrandText() {
     return this.$('.onfido-sdk-ui-Theme-cobrandText')
   }
+  async cobrandLogo() {
+    return this.$('.onfido-sdk-ui-Theme-logoCobrandImage')
+  }
   async poweredBy() {
     return this.$('.onfido-sdk-ui-Theme-poweredBy')
+  }
+  async onfidoFooter() {
+    return this.$('.onfido-sdk-ui-Theme-footer')
   }
 
   copy(lang) {
@@ -57,6 +63,22 @@ class BasePage {
       'Test Failed: Cobrand text should be displayed'
     )
     verifyElementCopy(this.cobrandText(), 'Planet Express, Incorporated')
+    verifyElementCopy(this.poweredBy(), 'powered by')
+  }
+
+  async checkLogoCobrandIsVisible() {
+    assert.isTrue(
+      this.cobrandUI().isDisplayed(),
+      'Test Failed: Cobrand UI should be displayed'
+    )
+    assert.isTrue(
+      this.cobrandLabel().isDisplayed(),
+      'Test Failed: Cobrand text should be displayed'
+    )
+    assert.isTrue(
+      this.cobrandLogo().isDisplayed(),
+      'Test Failed: Cobrand logo should be displayed'
+    )
     verifyElementCopy(this.poweredBy(), 'powered by')
   }
 }

@@ -17,10 +17,12 @@ import type {
   WithPermissionsFlowProps,
 } from '~types/hocs'
 
-// Specify just a camera height (no width) because on safari if you specify both
+// Specify just a camera width (no height) because on safari if you specify both
 // height and width you will hit an OverconstrainedError if the camera does not
 // support the precise resolution.
-const DEFAULT_CAMERA_WIDTH_IN_PX = 1280
+// Using width here because on some special devices (e.g. Samsung Galaxy),
+// setting 720px in height results to 720x960 resolution instead of the desired 720x1280.
+const DEFAULT_CAMERA_WIDTH_IN_PX = 1280 // HD 720p
 
 type Props = CameraProps &
   WebcamProps &
@@ -38,8 +40,9 @@ const Camera: FunctionComponent<Props> = ({
   docLiveCaptureFrame = false,
   facing = 'user',
   fallbackHeight,
+  fallbackToDefaultWidth,
   hasGrantedPermission,
-  idealCameraHeight,
+  idealCameraWidth,
   isButtonDisabled,
   onButtonClick,
   onFailure,
@@ -49,56 +52,64 @@ const Camera: FunctionComponent<Props> = ({
   renderVideoLayer,
   translate,
   webcamRef,
-}) => (
-  <div
-    className={classNames(style.camera, {
-      [style.docLiveCaptureFrame]: docLiveCaptureFrame,
-      [style.docAutoCaptureFrame]: docAutoCaptureFrame,
-    })}
-  >
-    {renderTitle}
-    <div className={classNames(style.container, containerClassName)}>
-      <div
-        className={style.webcamContainer}
-        role="group"
-        aria-describedby="cameraViewAriaLabel"
-      >
-        <Webcam
-          audio={audio}
-          className={style.video}
-          facingMode={facing}
-          width={idealCameraHeight || DEFAULT_CAMERA_WIDTH_IN_PX}
-          fallbackWidth={fallbackHeight || DEFAULT_CAMERA_WIDTH_IN_PX}
-          {...{ onFailure, onUserMedia, ref: webcamRef }}
-        />
-      </div>
-      {buttonType === 'photo' && (
-        <div className={style.actions}>
-          <CameraButton
-            ariaLabel={translate('selfie_capture.button_accessibility')}
-            disableInteraction={!hasGrantedPermission || isButtonDisabled}
-            onClick={onButtonClick}
-            className={classNames(style.btn, {
-              [style.disabled]: !hasGrantedPermission || isButtonDisabled,
-            })}
-          />
+}) => {
+  const webcamProps = {
+    audio,
+    onFailure,
+    onUserMedia,
+    className: style.video,
+    facingMode: facing,
+    ref: webcamRef,
+    width: idealCameraWidth || DEFAULT_CAMERA_WIDTH_IN_PX,
+    fallbackWidth: fallbackToDefaultWidth
+      ? DEFAULT_CAMERA_WIDTH_IN_PX
+      : fallbackHeight,
+  }
+
+  return (
+    <div
+      className={classNames(style.camera, {
+        [style.docLiveCaptureFrame]: docLiveCaptureFrame,
+        [style.docAutoCaptureFrame]: docAutoCaptureFrame,
+      })}
+    >
+      {renderTitle}
+      <div className={classNames(style.container, containerClassName)}>
+        <div
+          className={style.webcamContainer}
+          role="group"
+          aria-describedby="cameraViewAriaLabel"
+        >
+          <Webcam {...webcamProps} />
         </div>
-      )}
-      {buttonType === 'video' &&
-        renderVideoLayer &&
-        renderVideoLayer({ hasGrantedPermission })}
-      <div
-        id="cameraViewAriaLabel"
-        aria-label={
-          buttonType === 'video'
-            ? translate('video_capture.frame_accessibility')
-            : translate('selfie_capture.frame_accessibility')
-        }
-      />
-      {children}
-      {renderError}
+        {buttonType === 'photo' && (
+          <div className={style.actions}>
+            <CameraButton
+              ariaLabel={translate('selfie_capture.button_accessibility')}
+              disableInteraction={!hasGrantedPermission || isButtonDisabled}
+              onClick={onButtonClick}
+              className={classNames(style.btn, {
+                [style.disabled]: !hasGrantedPermission || isButtonDisabled,
+              })}
+            />
+          </div>
+        )}
+        {buttonType === 'video' &&
+          renderVideoLayer &&
+          renderVideoLayer({ hasGrantedPermission })}
+        <div
+          id="cameraViewAriaLabel"
+          aria-label={
+            buttonType === 'video'
+              ? translate('video_capture.frame_accessibility')
+              : translate('selfie_capture.frame_accessibility')
+          }
+        />
+        {children}
+        {renderError}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 export default localised(withFailureHandling(withPermissionsFlow(Camera)))

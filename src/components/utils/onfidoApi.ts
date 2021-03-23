@@ -8,7 +8,6 @@ import type {
   ApiRawError,
   UploadFileResponse,
   DocumentImageResponse,
-  DocumentVideoResponse,
   ChallengeData,
   FaceVideoResponse,
   VideoChallengeResponse,
@@ -51,7 +50,7 @@ type UploadLivePhotoPayload = {
   snapshot_uuids?: string
 } & UploadPayload
 
-type SelfiePayload = { blob?: Blob } & UploadPayload
+type SelfiePayload = { blob: Blob } & UploadPayload
 
 type SubmitPayload = Omit<UploadPayload, 'sdkMetadata'> & {
   file?: Blob | FilePayload
@@ -81,8 +80,8 @@ export const formatError = (
 
 export const uploadDocument = (
   payload: UploadDocumentPayload,
-  url: string,
-  token: string,
+  url: string | undefined,
+  token: string | undefined,
   onSuccess?: SuccessCallback<DocumentImageResponse>,
   onError?: ErrorCallback
 ): Promise<DocumentImageResponse> => {
@@ -103,10 +102,10 @@ export const uploadDocument = (
 
 export const uploadLivePhoto = (
   { sdkMetadata, ...data }: UploadLivePhotoPayload,
-  url: string,
-  token: string,
-  onSuccess?: SuccessCallback<UploadFileResponse>,
-  onError?: ErrorCallback
+  url: string | undefined,
+  token: string | undefined,
+  onSuccess: SuccessCallback<UploadFileResponse>,
+  onError: ErrorCallback
 ): void => {
   const endpoint = `${url}/v3/live_photos`
 
@@ -121,10 +120,10 @@ export const uploadLivePhoto = (
 
 export const uploadSnapshot = (
   payload: UploadSnapshotPayload,
-  url: string,
-  token: string,
-  onSuccess?: SuccessCallback<SnapshotResponse>,
-  onError?: ErrorCallback
+  url: string | undefined,
+  token: string | undefined,
+  onSuccess: SuccessCallback<SnapshotResponse>,
+  onError: ErrorCallback
 ): void => {
   const endpoint = `${url}/v3/snapshots`
   sendFile(endpoint, payload, token, onSuccess, onError)
@@ -133,8 +132,8 @@ export const uploadSnapshot = (
 export const sendMultiframeSelfie = (
   snapshot: FilePayload,
   selfie: SelfiePayload,
-  token: string,
-  url: string,
+  token: string | undefined,
+  url: string | undefined,
   onSuccess: SuccessCallback<UploadFileResponse>,
   onError: ErrorCallback,
   sendEvent: (event: TrackedEventNames) => void
@@ -145,7 +144,7 @@ export const sendMultiframeSelfie = (
       filename: snapshot.filename,
     },
   }
-  const { blob, filename, sdkMetadata } = selfie
+  const { blob, filename = 'selfie', sdkMetadata } = selfie
 
   new Promise<SnapshotResponse>((resolve, reject) => {
     sendEvent('Starting snapshot upload')
@@ -166,48 +165,10 @@ export const sendMultiframeSelfie = (
     .catch((err) => onError(err))
 }
 
-export const uploadDocumentVideo = (
-  { blob, sdkMetadata }: UploadVideoPayload,
-  url: string,
-  token: string,
-  onSuccess?: SuccessCallback<DocumentVideoResponse>,
-  onError?: ErrorCallback
-): Promise<DocumentVideoResponse> => {
-  const placeholderChallengeData = {
-    languages: JSON.stringify([
-      { source: 'sdk', language_code: 'PLACEHOLDER' },
-    ]),
-    challenge: JSON.stringify([
-      {
-        query: [-1, -1, -1],
-        type: 'recite',
-      },
-      {
-        query: 'PLACEHOLDER',
-        type: 'movement',
-      },
-    ]),
-    challenge_id: 'PLACEHOLDER',
-    challenge_switch_at: -1,
-  }
-
-  const payload: SubmitLiveVideoPayload = {
-    ...placeholderChallengeData,
-    file: blob,
-    sdk_metadata: JSON.stringify(sdkMetadata),
-  }
-
-  const endpoint = `${url}/v3/live_videos`
-
-  return new Promise((resolve, reject) =>
-    sendFile(endpoint, payload, token, onSuccess || resolve, onError || reject)
-  )
-}
-
 export const uploadFaceVideo = (
   { challengeData, blob, language, sdkMetadata }: UploadVideoPayload,
-  url: string,
-  token: string,
+  url: string | undefined,
+  token: string | undefined,
   onSuccess?: SuccessCallback<FaceVideoResponse>,
   onError?: ErrorCallback
 ): Promise<FaceVideoResponse> => {
@@ -215,7 +176,7 @@ export const uploadFaceVideo = (
     challenges: challenge,
     id: challenge_id,
     switchSeconds: challenge_switch_at,
-  } = challengeData
+  } = challengeData || {}
 
   const payload: SubmitLiveVideoPayload = {
     file: blob,
@@ -234,11 +195,19 @@ export const uploadFaceVideo = (
 }
 
 export const requestChallenges = (
-  url: string,
-  token: string,
+  url: string | undefined,
+  token: string | undefined,
   onSuccess: SuccessCallback<VideoChallengeResponse>,
   onError: ErrorCallback
 ): void => {
+  if (!url) {
+    throw new Error('onfido_api_url not provided')
+  }
+
+  if (!token) {
+    throw new Error('token not provided')
+  }
+
   const options: HttpRequestParams = {
     endpoint: `${url}/v3/live_video_challenge`,
     contentType: 'application/json',
@@ -250,9 +219,9 @@ export const requestChallenges = (
 
 /* v4 APIs */
 export const uploadBinaryMedia = (
-  { file, filename }: UploadDocumentPayload,
-  url: string,
-  token: string,
+  { file, filename, sdkMetadata }: UploadDocumentPayload,
+  url: string | undefined,
+  token: string | undefined,
   includeHmacAuth = false
 ): Promise<UploadBinaryMediaReponse> =>
   new Promise((resolve, reject) => {
@@ -260,6 +229,7 @@ export const uploadBinaryMedia = (
       const tokenData = parseJwt(token)
       const formData = new FormData()
       formData.append('media', file, filename)
+      formData.append('sdk_metadata', JSON.stringify(sdkMetadata))
 
       if (!includeHmacAuth) {
         const requestParams: HttpRequestParams = {
@@ -298,8 +268,8 @@ export const uploadBinaryMedia = (
 
 export const createV4Document = (
   mediaIds: string[],
-  url: string,
-  token: string
+  url: string | undefined,
+  token: string | undefined
 ): Promise<CreateV4DocumentResponse> =>
   new Promise((resolve, reject) => {
     try {
@@ -334,13 +304,21 @@ export const objectToFormData = (object: SubmitPayload): FormData => {
   return formData
 }
 
-const sendFile = (
-  endpoint: string,
+const sendFile = <T>(
+  endpoint: string | undefined,
   data: SubmitPayload,
-  token: string,
-  onSuccess: SuccessCallback<UploadFileResponse>,
+  token: string | undefined,
+  onSuccess: SuccessCallback<T>,
   onError: ErrorCallback
 ) => {
+  if (!endpoint) {
+    throw new Error('onfido_api_url not provided')
+  }
+
+  if (!token) {
+    throw new Error('token not provided')
+  }
+
   const payload: SubmitPayload = {
     ...data,
     sdk_source: 'onfido_web_sdk',

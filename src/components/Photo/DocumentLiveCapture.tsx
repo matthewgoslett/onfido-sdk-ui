@@ -36,11 +36,10 @@ type State = {
   isCapturing: boolean
 }
 
-const IDEAL_CAMERA_HEIGHT_IN_PX = 1080
-const FALLBACK_HEIGHT_IN_PX = 720
+const IDEAL_CAMERA_WIDTH_IN_PX = 1080 // Full HD 1080p
 
 export default class DocumentLiveCapture extends Component<Props, State> {
-  private webcam?: Webcam = null
+  private webcam?: Webcam
 
   state = {
     hasAllowedCameraAccess: false,
@@ -69,6 +68,10 @@ export default class DocumentLiveCapture extends Component<Props, State> {
   }
 
   captureDocumentPhoto = (): void => {
+    if (!this.webcam) {
+      return
+    }
+
     this.setState({ isCapturing: true })
     sendEvent('Taking live photo of document')
     screenshot(this.webcam, this.captureDocument, 'image/jpeg')
@@ -104,10 +107,10 @@ export default class DocumentLiveCapture extends Component<Props, State> {
           <Camera
             facing="environment"
             docLiveCaptureFrame
-            idealCameraHeight={IDEAL_CAMERA_HEIGHT_IN_PX}
+            idealCameraWidth={IDEAL_CAMERA_WIDTH_IN_PX}
             containerClassName={containerClassName}
             renderTitle={renderTitle}
-            webcamRef={(c: Webcam) => (this.webcam = c)}
+            webcamRef={(ref) => ref && (this.webcam = ref)}
             isUploadFallbackDisabled={isUploadFallbackDisabled}
             trackScreen={trackScreen}
             onUserMedia={this.handleUserMediaReady}
@@ -125,13 +128,13 @@ export default class DocumentLiveCapture extends Component<Props, State> {
             buttonType="photo"
             onButtonClick={this.captureDocumentPhoto}
             isButtonDisabled={hasCameraError || isCapturing}
-            fallbackHeight={FALLBACK_HEIGHT_IN_PX}
+            fallbackToDefaultWidth
           >
             {hasAllowedCameraAccess && !hasCameraError && (
               <Timeout seconds={10} onTimeout={this.handleTimeout} />
             )}
             <ToggleFullScreen />
-            <DocumentOverlay type={documentType} />
+            <DocumentOverlay documentType={documentType} />
             {children}
           </Camera>
         )}

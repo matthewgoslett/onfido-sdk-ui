@@ -3,11 +3,17 @@
 /* Document */
 
 .document {
+  border: 1px solid var(--osdk-color-background-alert-info); /* Doc Autocapture border colour */
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   top: 0;
+}
+
+.document svg {
+  height: 100%;
+  width: 100%;
 }
 
 .document svg > path {
@@ -16,19 +22,18 @@
   transition: 0.5s;
 }
 
-.document .hollow {
+.document .fullScreen {
   fill: $color-camera-overlay;
   stroke: transparent;
 }
 
-.document .highlight {
+.document .hollow {
   fill: transparent;
   stroke: $color-white;
   stroke-width: 0.25;
 }
 
 .document .placeholder {
-  background-image: url('./assets/card-placeholder.svg');
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
@@ -36,6 +41,22 @@
   left: 0;
   right: 0;
   width: 100%;
+
+  &.card {
+    background-image: url('./assets/card-placeholder.svg');
+  }
+
+  &.passport {
+    background-image: url('./assets/passport-placeholder.svg');
+  }
+
+  &.frPaperDl {
+    background-image: url('./assets/fr-dl-placeholder.svg');
+  }
+
+  &.itPaperId {
+    background-image: url('./assets/it-id-placeholder.svg');
+  }
 }
 
 /* Face */

@@ -1,109 +1,175 @@
 import { h, FunctionComponent, Fragment } from 'preact'
-import { memo, useCallback, useContext, useState } from 'preact/compat'
+import { memo, useCallback, useEffect } from 'preact/compat'
+import { Button } from '@onfido/castor-react'
+import classNames from 'classnames'
 
-import { LocaleContext } from '~locales'
-import Button from '../Button'
+import { useLocales } from '~locales'
+import { DOC_VIDEO_INSTRUCTIONS_MAPPING } from '~utils/localesMapping'
+import theme from 'components/Theme/style.scss'
 import Instructions from './Instructions'
-import ProgressBar from './ProgressBar'
+import StepProgress from './StepProgress'
+import useCaptureStep from './useCaptureStep'
 import style from './style.scss'
 
-import { TILT_MODE, CaptureSteps } from '~types/docVideo'
+import type { CaptureFlows } from '~types/docVideo'
 import type { VideoLayerProps } from '../VideoCapture'
 
-export type Props = {
-  onNext: () => void
-  step: CaptureSteps
-  stepNumber: number
-  subtitle: string
-  title: string
-  totalSteps: number
-} & VideoLayerProps
-
-const BUTTON_LOCALE_MAP: Record<CaptureSteps, string> = {
-  intro: '',
-  front: 'doc_video_capture.button_record',
-  tilt: 'doc_video_capture.button_next',
-  back: 'doc_video_capture.button_stop',
+type OverlayProps = {
+  withPlaceholder?: boolean
 }
 
-const SUCCESS_STATE_TIMEOUT = 1000
+export type Props = {
+  captureFlow: CaptureFlows
+  flowRestartTrigger: number
+  footerHeightLimit: number
+  onSubmit: () => void
+  renderOverlay: (props: OverlayProps) => h.JSX.Element | null
+} & VideoLayerProps
+
+const VISIBLE_BUTTON_TIMEOUT = 3000
+const SUCCESS_STATE_TIMEOUT = 2000
+const SUCCESS_STATE_VIBRATION = 500
+const HOLDING_STILL_TIMEOUT = 6000
 
 const VideoLayer: FunctionComponent<Props> = ({
+  captureFlow,
   disableInteraction,
+  flowRestartTrigger,
+  footerHeightLimit,
   isRecording,
-  onNext,
   onStart,
   onStop,
-  step,
-  stepNumber,
-  subtitle,
-  title,
-  totalSteps,
+  onSubmit,
+  renderOverlay,
 }) => {
-  const [stepFinished, setStepFinished] = useState(false)
-  const { translate } = useContext(LocaleContext)
+  const {
+    captureStep,
+    nextRecordState,
+    nextStep,
+    recordState,
+    restart: restartFlow,
+    stepNumber,
+    totalSteps,
+  } = useCaptureStep(captureFlow)
 
-  const handleNext = useCallback(() => {
-    if (step === 'intro') {
-      onNext()
-      return
-    }
+  const { [captureStep]: instructionKeys } = DOC_VIDEO_INSTRUCTIONS_MAPPING[
+    captureFlow
+  ]
 
-    setStepFinished(true)
+  const { translate } = useLocales()
 
-    setTimeout(() => {
-      if (stepNumber >= totalSteps) {
-        onStop()
-        return
+  /*
+  useEffect(() => {
+    console.log({ captureStep, recordState })
+  }, [captureStep, recordState])
+  */
+
+  useEffect(() => {
+    switch (recordState) {
+      case 'hideButton':
+        setTimeout(nextRecordState, VISIBLE_BUTTON_TIMEOUT)
+        break
+
+      case 'holdStill':
+        setTimeout(nextRecordState, HOLDING_STILL_TIMEOUT)
+        break
+
+      case 'success': {
+        navigator.vibrate(SUCCESS_STATE_VIBRATION)
+
+        if (stepNumber >= totalSteps) {
+          onStop()
+        }
+
+        setTimeout(() => {
+          if (stepNumber >= totalSteps) {
+            onSubmit()
+          } else {
+            nextStep()
+          }
+        }, SUCCESS_STATE_TIMEOUT)
+
+        break
       }
 
-      onNext()
-      setStepFinished(false)
-    }, SUCCESS_STATE_TIMEOUT)
-  }, [step, stepNumber, totalSteps, onNext, onStop])
+      default:
+        break
+    }
+  }, [recordState]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startRecording = (
-    <Fragment>
-      <Instructions title={title} />
-      <Button
-        variants={['centered', 'primary', 'lg']}
-        disabled={disableInteraction}
-        onClick={onStart}
-      >
-        {translate('doc_video_capture.button_start')}
-      </Button>
-    </Fragment>
+  useEffect(() => {
+    restartFlow()
+  }, [flowRestartTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleStart = useCallback(() => {
+    nextStep()
+    onStart()
+  }, [nextStep, onStart])
+
+  const { title, subtitle, button } = instructionKeys
+
+  const instruction = (
+    <Instructions
+      subtitle={subtitle ? translate(subtitle) : undefined}
+      title={translate(title)}
+    />
   )
 
-  const recording = stepFinished ? (
-    <span className={style.success} />
-  ) : (
-    <Fragment>
-      <Instructions
-        icon={step}
-        subtitle={subtitle}
-        tiltMode={TILT_MODE}
-        title={title}
-      />
-      <Button
-        variants={['centered', 'primary', 'lg']}
-        disabled={disableInteraction}
-        onClick={handleNext}
-      >
-        {translate(BUTTON_LOCALE_MAP[step])}
-      </Button>
-    </Fragment>
+  const action = (
+    <Button
+      variant="primary"
+      className={classNames(theme['button-centered'], theme['button-lg'])}
+      disabled={disableInteraction}
+      onClick={isRecording ? nextRecordState : handleStart}
+      data-onfido-qa="doc-video-capture-btn"
+    >
+      {translate(button)}
+    </Button>
   )
+
+  const renderItems = useCallback(() => {
+    if (recordState === 'holdStill') {
+      return (
+        <div className={style.holdStill}>
+          <span className={style.text}>
+            {translate('doc_video_capture.header_passport_progress')}
+          </span>
+          <span className={style.loading}>
+            <span className={style.active} />
+            <span className={style.background} />
+          </span>
+        </div>
+      )
+    }
+
+    if (recordState === 'success') {
+      return (
+        <div className={style.instructions}>
+          <span className={style.success} />
+        </div>
+      )
+    }
+
+    return (
+      <Fragment>
+        {instruction}
+        {recordState === 'showButton' ? (
+          action
+        ) : (
+          <div className={style.buttonPlaceholder} />
+        )}
+      </Fragment>
+    )
+  }, [action, recordState, instruction, translate])
 
   return (
     <Fragment>
-      <ProgressBar
-        stepFinished={stepFinished}
-        stepNumber={stepNumber}
-        totalSteps={totalSteps}
-      />
-      <div className={style.actions}>
-        {isRecording ? recording : startRecording}
+      {renderOverlay({
+        withPlaceholder: captureStep === 'intro',
+      })}
+      <div className={style.controls} style={{ top: footerHeightLimit }}>
+        <StepProgress stepNumber={stepNumber} totalSteps={totalSteps} />
+        {renderItems()}
       </div>
     </Fragment>
   )

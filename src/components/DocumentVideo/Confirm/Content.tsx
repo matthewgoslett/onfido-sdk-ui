@@ -1,25 +1,29 @@
 import { h, FunctionComponent } from 'preact'
-import { memo, useContext } from 'preact/compat'
+import { memo } from 'preact/compat'
 
-import { LocaleContext } from '~locales'
+import { useLocales } from '~locales'
 import CaptureViewer from '../../CaptureViewer'
 import style from './style.scss'
 
 import type { DocumentCapture } from '~types/redux'
 
 type Props = {
-  capture: DocumentCapture
+  capture?: DocumentCapture
   previewing: boolean
 }
 
 const Content: FunctionComponent<Props> = ({ capture, previewing }) => {
-  const { translate } = useContext(LocaleContext)
+  const { translate } = useLocales()
+
+  if (!capture) {
+    return null
+  }
 
   if (previewing) {
     return (
       <div className={style.preview}>
         <span className={style.title}>
-          {translate('doc_video_confirmation.preview_title')}
+          {translate('doc_video_confirmation.title')}
         </span>
         <CaptureViewer
           capture={capture}
@@ -33,12 +37,8 @@ const Content: FunctionComponent<Props> = ({ capture, previewing }) => {
   return (
     <div className={style.content}>
       <span className={style.icon} />
-      <span className={style.title}>
-        {translate('doc_video_confirmation.title')}
-      </span>
-      <span className={style.body}>
-        {translate('doc_video_confirmation.body')}
-      </span>
+      <span className={style.title}>{translate('outro.body')}</span>
+      <span className={style.body}>{translate('video_confirmation.body')}</span>
     </div>
   )
 }

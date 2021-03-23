@@ -10,9 +10,33 @@ This project adheres to the Node [default version scheme](https://docs.npmjs.com
 
 ### Added
 
+- Internal: Introduce `SdkOptionsProvider` component and `useSdkOptions()` hook for SDK options' single source of truth.
+- Public: Added support for UI customizations in SDK configuration using `customUI` option. See README for details of supported customization options.
+- Internal: Add Woopra tracking for UI customization option usage.
+
+### Changed
+
+- UI: Replaced internal button component with button from @onfido/castor-react.
+- UI: Replaced some Sass variables with CSS variables to allow customization of colors and fonts.
+- Public: Added new enterprise feature `logoCobrand`. When purchased and enabled allows integrator to provide their own logo image to be displayed alongside the Onfido logo.
+- Internal: Use Node 14 LTS for Travis to be consistent with `.nvmrc` and `Dockerfile`.
+- Internal: Enable `strict` mode in tsconfig.json
+
+### Changed
+
+### Fixed
+
+- UI: Fix Camera Permission icon not displaying on iOS devices on Selfie/Liveness capture flow
+
+## [6.6.0] - 2021-03-11
+
+### Added
+
 - Internal: Added ScreenLayout component. This is currently used in the Welcome and Complete screens.
-- Internal: Added user consent screen
+- Public: Added user consent screen
 - Public: Added callbacks that are triggered on user media submission if the feature is enabled. Note - This is a premium enterprise feature.
+- Internal: App component, Redux system, utils, HoCs & routers are now typed in TypeScript.
+- Internal: Use ScreenLayout component in Confirm screen.
 
 ### Changed
 
@@ -23,16 +47,14 @@ This project adheres to the Node [default version scheme](https://docs.npmjs.com
 - Public: Fix zoomed document capture view for Document Live Capture on some Huawei devices, e.g. Huawei P40, P30.
 - Public: Fix issue where documents are submitted to Onfido API without filename or file type.
 
-## [6.5.0] - 2020-02-08
+## [6.5.0] - 2021-02-08
 
 ### Added
 
 - Public: Added npm latest version badge.
 - Internal: Now the UI tests will hit API endpoints from a dockerised mock server.
-- Internal: Introduce integration tests for API endpoint integrations.
-- Internal: Added ScreenLayout component. This is currently used in the Welcome and Complete screens.
 - Internal: Introduce TypeScript on non-critical components & deprecate FlowType.
-- Internal: App component, Redux system, utils, HoCs & routers are now typed in TypeScript.
+- Internal: Introduce integration tests for API endpoint integrations.
 
 ### Changed
 
@@ -907,7 +929,8 @@ Install with `npm install onfido-sdk-ui@0.12.0-rc.1`
 
 - NPM (commonjs2) style of importing the library now works
 
-[next-version]: https://github.com/onfido/onfido-sdk-ui/compare/6.5.0...development
+[next-version]: https://github.com/onfido/onfido-sdk-ui/compare/6.6.0...development
+[6.6.0]: https://github.com/onfido/onfido-sdk-ui/compare/6.5.0...6.6.0
 [6.5.0]: https://github.com/onfido/onfido-sdk-ui/compare/6.4.0...6.5.0
 [6.4.0]: https://github.com/onfido/onfido-sdk-ui/compare/6.3.1...6.4.0
 [6.3.1]: https://github.com/onfido/onfido-sdk-ui/compare/6.3.0...6.3.1

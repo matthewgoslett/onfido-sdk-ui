@@ -46,6 +46,18 @@
         "subtitle": "You can now return to your computer to continue",
         "title": "Uploads successful"
     },
+    "doc_capture": {
+        "detail": {
+            "folded_doc_front": "Lay your document flat, include all inner pages (must contain your photo)"
+        },
+        "header_folded_doc_front": "Profile photo side",
+        "prompt": {
+            "button_card": "Plastic card",
+            "button_paper": "Paper document",
+            "title_id": "What type of identity card do you have?",
+            "title_license": "What type of license do you have?"
+        }
+    },
     "doc_confirmation": {
         "alert": {
             "blur_detail": "Make sure everything is clear",
@@ -117,6 +129,52 @@
         "title_permit_back": "Submit residence permit (back)",
         "title_permit_front": "Submit residence permit (front)",
         "title_tax_letter": "Submit letter"
+    },
+    "doc_video_capture": {
+        "button_primary_fallback": "Next step",
+        "button_primary_fallback_end": "Finish recording",
+        "detail_step2": "Keep the document in full view at all times",
+        "header": "While holding your document, keep its front side within the frame",
+        "header_paper_doc_step2": "Slowly turn your document around to show the outer pages",
+        "header_passport": "While holding your passport, keep the photo page within the frame",
+        "header_passport_progress": "Hold still",
+        "header_step1": "Now, keep still",
+        "header_step2": "Slowly turn your document around to show the back",
+        "prompt": {
+            "detail_timeout": "Video recording is limited to 30 seconds. <fallback>Redo video actions<\/fallback>"
+        },
+        "stepper": "Step <step><\/step> of <total><\/total>"
+    },
+    "doc_video_capture_legacy": {
+        "alert": {
+            "timeout": {
+                "detail": "Video recording is limited to 30 seconds. <fallback>Redo video actions<\/fallback>",
+                "title": "Looks like you took too long"
+            }
+        },
+        "paper_id_flow_selector": {
+            "title_id": "What type of identity card do you have?",
+            "title_license": "What type of license do you have?",
+            "button_card": "Plastic card",
+            "button_paper": "Paper document"
+        },
+        "welcome": {
+            "title": "Verify your identity",
+            "subtitle": "It should take a few minutes",
+            "caption": "Use your device to record:",
+            "instruction_item_1": "your identity document",
+            "instruction_item_2": "your face",
+            "limit": "Recording is limited to 30 seconds",
+            "next_button": "Choose document"
+        },
+        "button_record": "Start recording",
+        "button_start": "Start",
+        "hold_still": "Hold still",
+        "progress": "STEP <step></step> OF <total></total>"
+    },
+    "doc_video_confirmation": {
+        "button_secondary": "Preview video",
+        "title": "Check your video"
     },
     "error_unsupported_browser": {
         "subtitle_android": "Restart the process on the latest version of Google Chrome",
@@ -342,52 +400,11 @@
         "button_primary": "Upload photo",
         "image_detail_blur_alt": "Example of a blurry document",
         "image_detail_blur_label": "All details must be clear — nothing blurry",
-        "image_detail_cutoff_alt": "Example of a cut-off document",
         "image_detail_cutoff_label": "Show all details — including the bottom 2 lines",
-        "image_detail_glare_alt": "Example of a document with glare",
         "image_detail_glare_label": "Move away from direct light — no glare",
-        "image_detail_good_alt": "Document example",
         "image_detail_good_label": "The photo should clearly show your document",
         "subtitle": "Scans and photocopies are not accepted",
         "title": "Upload passport photo page"
-    },
-    "doc_video_capture": {
-        "alert": {
-            "timeout": {
-                "detail": "Video recording is limited to 30 seconds. <fallback>Redo video actions<\/fallback>",
-                "title": "Looks like you took too long"
-            }
-        },
-        "instructions": {
-            "passport": {
-                "intro_title": "Record a video of your passport photo page",
-                "front_title": "Keep your passport photo page in the frame",
-                "front_subtitle": "Start recording and follow the instructions",
-                "tilt_title": "Slowly tilt your passport to show light reflections",
-                "tilt_subtitle": "Press next step when complete"
-            },
-            "others": {
-                "intro_title": "Record a video of your document",
-                "front_title": "Keep the front of your document in the frame",
-                "front_subtitle": "Start recording and follow the instructions",
-                "tilt_title": "Slowly tilt your document to show light reflections",
-                "tilt_subtitle": "Press next step when complete",
-                "back_title": "Now, flip your document to show its back",
-                "back_subtitle": "Press done when complete"
-            }
-        },
-        "button_next": "Next step",
-        "button_record": "Start recording",
-        "button_start": "Start",
-        "button_stop": "Done"
-    },
-    "doc_video_confirmation": {
-        "title": "Thank you",
-        "body": "Your video has been recorded",
-        "preview_title": "Check your video",
-        "button_upload": "Upload video",
-        "button_preview": "Preview video",
-        "button_redo": "Retake video"
     },
     "user_consent": {
         "button_primary": "Accept",
@@ -405,6 +422,7 @@
         "body_record": "Press record and follow the instructions",
         "body_stop": "When you're done, press stop",
         "button_primary_next": "Next",
+        "button_primary_start": "Start recording",
         "button_record_accessibility": "Start recording",
         "button_stop_accessibility": "Stop recording",
         "frame_accessibility": "View from camera",
@@ -414,9 +432,15 @@
             "challenge_turn_right": "right",
             "challenge_turn_template": "Look over your %{side} shoulder"
         },
+        "prompt": {
+            "header_timeout": "Looks like you took too long"
+        },
         "status": "Recording"
     },
     "video_confirmation": {
+        "body": "Your video has been recorded",
+        "button_primary": "Upload video",
+        "button_secondary": "Retake video",
         "title": "Check selfie video",
         "video_accessibility": "Replay your recorded video"
     },
@@ -428,9 +452,12 @@
         "title": "Let's make sure nobody's impersonating you"
     },
     "welcome": {
-        "description_p_1": "To open a bank account, we will need to verify your identity.",
-        "description_p_2": "It will only take a couple of minutes.",
+        "doc_video_subtitle": "It should take a few minutes",
+        "list_header_doc_video": "Use your device to record:",
+        "list_item_doc": "your identity document",
+        "list_item_doc_video_timeout": "Recording is limited to 30 seconds",
+        "list_item_selfie": "your face",
         "next_button": "Verify Identity",
-        "title": "Open your new bank account"
+        "title": "Verify your identity"
     }
 }

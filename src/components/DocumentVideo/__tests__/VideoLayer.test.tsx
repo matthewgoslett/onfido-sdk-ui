@@ -1,54 +1,141 @@
-import { h } from 'preact'
+import { h, FunctionComponent } from 'preact'
+import { useState } from 'preact/compat'
 import { mount, ReactWrapper } from 'enzyme'
 
 import MockedLocalised from '~jest/MockedLocalised'
 import VideoLayer, { Props as VideoLayerProps } from '../VideoLayer'
-import type { CaptureSteps } from '~types/docVideo'
+
+import type { CaptureFlows } from '~types/docVideo'
+
+navigator.vibrate = jest.fn()
 
 const defaultProps: VideoLayerProps = {
+  captureFlow: 'cardId',
   disableInteraction: false,
+  flowRestartTrigger: 0,
+  footerHeightLimit: 300,
   isRecording: false,
-  onNext: jest.fn(),
   onStart: jest.fn(),
   onStop: jest.fn(),
-  step: 'intro',
-  stepNumber: 0,
-  subtitle: 'Fake subtitle',
-  title: 'Fake title',
-  totalSteps: 3,
+  onSubmit: jest.fn(),
+  renderOverlay: jest.fn().mockReturnValue(<div>Overlay</div>),
 }
+
+type MockedVideoCaptureProps = {
+  captureFlow: CaptureFlows
+  withRestartButton?: boolean
+}
+
+const MockedVideoCapture: FunctionComponent<MockedVideoCaptureProps> = ({
+  captureFlow,
+  withRestartButton = false,
+}) => {
+  const [isRecording, setIsRecording] = useState(false)
+  const [flowRestartTrigger, setFlowRestartTrigger] = useState(0)
+
+  return (
+    <MockedLocalised>
+      <VideoLayer
+        {...defaultProps}
+        captureFlow={captureFlow}
+        flowRestartTrigger={flowRestartTrigger}
+        isRecording={isRecording}
+        onStart={() => {
+          defaultProps.onStart()
+          setIsRecording(true)
+        }}
+        onStop={() => {
+          defaultProps.onStop()
+          setIsRecording(false)
+        }}
+      />
+      {withRestartButton && (
+        <button
+          id="restartFlow"
+          onClick={() =>
+            setFlowRestartTrigger((prevTrigger) => prevTrigger + 1)
+          }
+        >
+          Restart flow
+        </button>
+      )}
+    </MockedLocalised>
+  )
+}
+
+const waitForTimeout = (
+  wrapper: ReactWrapper,
+  type: 'button' | 'holding' | 'success'
+) => {
+  switch (type) {
+    case 'button':
+      jest.runTimersToTime(3000)
+      break
+    case 'holding':
+      jest.runTimersToTime(6000)
+      break
+    case 'success':
+      jest.runTimersToTime(2000)
+      break
+    default:
+      break
+  }
+
+  wrapper.update()
+}
+
+const findButton = (wrapper: ReactWrapper) =>
+  wrapper.find({ 'data-onfido-qa': 'doc-video-capture-btn' })
 
 const simulateNext = (wrapper: ReactWrapper) =>
-  wrapper.find('.actions Button > button').simulate('click')
+  findButton(wrapper).simulate('click')
 
-const assertSuccessState = (wrapper: ReactWrapper, isSuccess: boolean) => {
-  expect(wrapper.find('.actions Button').exists()).toEqual(!isSuccess)
-  expect(wrapper.find('.actions .success').exists()).toEqual(isSuccess)
+const assertButton = (wrapper: ReactWrapper) => {
+  expect(findButton(wrapper).exists()).toBeFalsy()
+  waitForTimeout(wrapper, 'button')
+  expect(findButton(wrapper).exists()).toBeTruthy()
 }
 
-const assertSuccessStep = (wrapper: ReactWrapper, lastStep = false) => {
-  assertSuccessState(wrapper, true)
+const assertHoldingState = (wrapper: ReactWrapper) => {
+  expect(wrapper.find('.holdStill').exists()).toBeTruthy()
+  expect(wrapper.find('.holdStill .text').text()).toEqual(
+    'doc_video_capture.header_passport_progress'
+  )
+  expect(wrapper.find('.holdStill .loading').exists()).toBeTruthy()
+  expect(wrapper.find('.controls .success').exists()).toBeFalsy()
+  expect(findButton(wrapper).exists()).toBeFalsy()
 
-  jest.runTimersToTime(2000)
+  waitForTimeout(wrapper, 'holding')
+  expect(wrapper.find('.holdStill').exists()).toBeFalsy()
+}
+
+const assertSuccessState = (wrapper: ReactWrapper, lastStep = false) => {
+  expect(wrapper.find('.holdStill').exists()).toBeFalsy()
+  expect(wrapper.find('.controls .success').exists()).toBeTruthy()
+  expect(findButton(wrapper).exists()).toBeFalsy()
+  expect(navigator.vibrate).toHaveBeenCalledWith(500)
 
   if (lastStep) {
     expect(defaultProps.onStop).toHaveBeenCalled()
     expect(defaultProps.onStop).toHaveBeenCalledTimes(1)
-    expect(defaultProps.onNext).not.toHaveBeenCalled()
   } else {
-    expect(defaultProps.onNext).toHaveBeenCalled()
-    expect(defaultProps.onNext).toHaveBeenCalledTimes(1)
     expect(defaultProps.onStop).not.toHaveBeenCalled()
   }
 
-  // Keep success state for the last step
-  wrapper.update()
-  assertSuccessState(wrapper, lastStep)
+  waitForTimeout(wrapper, 'success')
+
+  if (lastStep) {
+    expect(defaultProps.onSubmit).toHaveBeenCalled()
+    expect(defaultProps.onSubmit).toHaveBeenCalledTimes(1)
+  } else {
+    expect(defaultProps.onSubmit).not.toHaveBeenCalled()
+  }
 }
 
 describe('DocumentVideo', () => {
   describe('VideoLayer', () => {
     beforeAll(() => {
+      console.warn = jest.fn()
       jest.useFakeTimers()
     })
 
@@ -64,42 +151,83 @@ describe('DocumentVideo', () => {
         </MockedLocalised>
       )
 
-      expect(wrapper.find('Button').exists()).toBeTruthy()
+      expect(findButton(wrapper).exists()).toBeTruthy()
+      simulateNext(wrapper)
+      expect(defaultProps.onStart).toHaveBeenCalled()
     })
 
     describe('when recording', () => {
-      it('renders items correctly', () => {
-        const wrapper = mount(
-          <MockedLocalised>
-            <VideoLayer {...defaultProps} isRecording />
-          </MockedLocalised>
-        )
+      let wrapper: ReactWrapper
 
-        expect(wrapper.find('Button').exists()).toBeTruthy()
+      beforeEach(() => {
+        wrapper = mount(<MockedVideoCapture captureFlow="cardId" />)
         simulateNext(wrapper)
-        expect(defaultProps.onNext).toHaveBeenCalled()
       })
 
-      describe('after intro step', () => {
-        const steps: CaptureSteps[] = ['front', 'tilt', 'back']
+      it('hides button initially and displays after timeout', () =>
+        assertButton(wrapper))
 
-        steps.forEach((step, stepIndex) =>
-          it(`delays onNext to show success state when step=${step}`, () => {
-            const wrapper = mount(
-              <MockedLocalised>
-                <VideoLayer
-                  {...defaultProps}
-                  isRecording
-                  step={step}
-                  stepNumber={stepIndex + 1}
-                />
-              </MockedLocalised>
-            )
+      it('shows success state after click', () => {
+        waitForTimeout(wrapper, 'button')
+        simulateNext(wrapper)
+        assertSuccessState(wrapper)
+      })
 
-            simulateNext(wrapper)
-            assertSuccessStep(wrapper, step === 'back')
-          })
+      it('hides success state after timeout', () => {
+        waitForTimeout(wrapper, 'button')
+        simulateNext(wrapper)
+        waitForTimeout(wrapper, 'success')
+        wrapper.setProps({})
+        expect(wrapper.find('.controls .success').exists()).toBeFalsy()
+      })
+    })
+
+    describe('with passports', () => {
+      let wrapper: ReactWrapper
+
+      beforeEach(() => {
+        wrapper = mount(<MockedVideoCapture captureFlow="passport" />)
+        simulateNext(wrapper)
+      })
+
+      it('hides button initially and displays after timeout', () =>
+        assertButton(wrapper))
+
+      it('shows holdStill state after click', () => {
+        waitForTimeout(wrapper, 'button')
+        simulateNext(wrapper)
+        assertHoldingState(wrapper)
+      })
+
+      it('shows success state after timeout', () => {
+        waitForTimeout(wrapper, 'button')
+        simulateNext(wrapper)
+        waitForTimeout(wrapper, 'holding')
+        assertSuccessState(wrapper, true)
+      })
+    })
+
+    describe('when flow restart triggered', () => {
+      let wrapper: ReactWrapper
+
+      beforeEach(() => {
+        wrapper = mount(
+          <MockedVideoCapture captureFlow="cardId" withRestartButton />
         )
+        simulateNext(wrapper) // intro -> front
+        waitForTimeout(wrapper, 'button')
+        simulateNext(wrapper) // front -> back
+      })
+
+      it('restarts flow correctly', () => {
+        wrapper.find('#restartFlow').simulate('click')
+        wrapper.update()
+
+        const stepProgress = wrapper.find('StepProgress')
+        expect(stepProgress.props()).toMatchObject({
+          stepNumber: 0,
+          totalSteps: 2,
+        })
       })
     })
   })

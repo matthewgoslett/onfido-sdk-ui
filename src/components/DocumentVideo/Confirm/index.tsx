@@ -1,154 +1,59 @@
 import { h, FunctionComponent } from 'preact'
-import { memo, useCallback, useContext, useState } from 'preact/compat'
+import { memo, useCallback, useState } from 'preact/compat'
 import type { Dispatch } from 'redux'
 import { useDispatch, useSelector } from 'react-redux'
+import { Button } from '@onfido/castor-react'
+import classNames from 'classnames'
 
-import { LocaleContext } from '~locales'
-import {
-  uploadDocument,
-  uploadDocumentVideo,
-  uploadBinaryMedia,
-  createV4Document,
-} from '~utils/onfidoApi'
+import { useSdkOptions } from '~contexts'
+import { useLocales } from '~locales'
+import { uploadBinaryMedia, createV4Document } from '~utils/onfidoApi'
 import { actions } from 'components/ReduxAppWrapper/store/actions'
-import Button from '../../Button'
+import theme from 'components/Theme/style.scss'
 import Error from '../../Error'
 import Spinner from '../../Spinner'
 import Content from './Content'
 import style from './style.scss'
 
-import type { ApiParsedError } from '~types/api'
-import type { CountryData } from '~types/commons'
 import type { CombinedActions, RootState, DocumentCapture } from '~types/redux'
 import type { ErrorProp, StepComponentDocumentProps } from '~types/routers'
 
 const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
-  documentType,
   nextStep,
   previousStep,
-  token,
+  triggerOnError,
 }) => {
+  const [{ token }] = useSdkOptions()
   const [loading, setLoading] = useState(false)
   const [previewing, setPreviewing] = useState(false)
-  const [error, setError] = useState<ErrorProp>(null)
-  const { translate } = useContext(LocaleContext)
+  const [error, setError] = useState<ErrorProp | undefined>(undefined)
+  const { translate } = useLocales()
 
   const dispatch = useDispatch<Dispatch<CombinedActions>>()
-  const apiUrl = useSelector<RootState, string>(
-    (state) => state.globals.urls.onfido_api_url
+  const apiUrl = useSelector<RootState, string | undefined>(
+    (state) => state.globals.urls.auth_url
   )
-  const documentFront = useSelector<RootState, DocumentCapture>(
+  const documentFront = useSelector<RootState, DocumentCapture | undefined>(
     (state) => state.captures.document_front
   )
-  const documentBack = useSelector<RootState, DocumentCapture>(
+  const documentBack = useSelector<RootState, DocumentCapture | undefined>(
     (state) => state.captures.document_back
   )
-  const documentVideo = useSelector<RootState, DocumentCapture>(
+  const documentVideo = useSelector<RootState, DocumentCapture | undefined>(
     (state) => state.captures.document_video
   )
-  const issuingCountry = useSelector<RootState, CountryData>(
-    (state) => state.globals.idDocumentIssuingCountry
-  )
 
-  const onUploadDocumentsV3 = useCallback(async () => {
-    setLoading(true)
-
-    const issuingCountryData =
-      documentType === 'passport'
-        ? {}
-        : {
-            issuing_country: issuingCountry.country_alpha3,
-          }
-
-    try {
-      const frontUploadResponse = await uploadDocument(
-        {
-          file: documentFront.blob,
-          sdkMetadata: documentFront.sdkMetadata,
-          side: 'front',
-          type: documentType,
-          validations: { detect_document: 'error' },
-          ...issuingCountryData,
-        },
-        apiUrl,
-        token
-      )
-
-      dispatch(
-        actions.setCaptureMetadata({
-          capture: documentFront,
-          apiResponse: frontUploadResponse,
-        })
-      )
-
-      if (documentBack) {
-        const backUploadResponse = await uploadDocument(
-          {
-            file: documentBack.blob,
-            sdkMetadata: documentBack.sdkMetadata,
-            side: 'back',
-            type: documentType,
-            validations: { detect_document: 'error' },
-            ...issuingCountryData,
-          },
-          apiUrl,
-          token
-        )
-
-        dispatch(
-          actions.setCaptureMetadata({
-            capture: documentBack,
-            apiResponse: backUploadResponse,
-          })
-        )
-      }
-
-      const videoUploadResponse = await uploadDocumentVideo(
-        {
-          blob: documentVideo.blob,
-          sdkMetadata: documentVideo.sdkMetadata,
-          ...issuingCountryData,
-        },
-        apiUrl,
-        token
-      )
-
-      dispatch(
-        actions.setCaptureMetadata({
-          capture: documentVideo,
-          apiResponse: videoUploadResponse,
-        })
-      )
-
-      nextStep()
-    } catch (errorResponse) {
-      setLoading(false)
-      const {
-        response: { error },
-      } = errorResponse as ApiParsedError
-
-      if (
-        error?.type === 'validation_error' &&
-        error?.fields.document_detection != null
-      ) {
-        setError({ name: 'INVALID_CAPTURE', type: 'error' })
-      } else {
-        setError({ name: 'REQUEST_ERROR', type: 'error' })
-      }
+  const onUploadDocuments = useCallback(async () => {
+    if (!documentFront) {
+      console.error('Front document not captured')
+      return
     }
-  }, [
-    documentType,
-    nextStep,
-    token,
-    dispatch,
-    apiUrl,
-    documentFront,
-    documentBack,
-    documentVideo,
-    issuingCountry,
-  ])
 
-  const onUploadDocumentsV4 = useCallback(async () => {
+    if (!documentVideo) {
+      console.error('Document video not captured')
+      return
+    }
+
     setLoading(true)
 
     const mediaUuids = []
@@ -224,6 +129,7 @@ const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
       nextStep()
     } catch (errorResponse) {
       setLoading(false)
+      triggerOnError(errorResponse)
       setError({ name: 'REQUEST_ERROR', type: 'error' })
     }
   }, [
@@ -234,12 +140,8 @@ const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
     documentFront,
     documentBack,
     documentVideo,
+    triggerOnError,
   ])
-
-  const onUploadDocuments =
-    process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true'
-      ? onUploadDocumentsV4
-      : onUploadDocumentsV3
 
   const onSecondaryClick = useCallback(() => {
     if (error || previewing) {
@@ -261,18 +163,22 @@ const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
       <div className={style.buttonsContainer}>
         <Button
           onClick={onUploadDocuments}
-          variants={['primary', 'lg', 'centered']}
+          variant="primary"
+          className={classNames(theme['button-centered'], theme['button-lg'])}
+          data-onfido-qa="doc-video-confirm-primary-btn"
         >
-          {translate('doc_video_confirmation.button_upload')}
+          {translate('video_confirmation.button_primary')}
         </Button>
         <Button
           onClick={onSecondaryClick}
-          variants={['secondary', 'lg', 'centered']}
+          variant="secondary"
+          className={classNames(theme['button-centered'], theme['button-lg'])}
+          data-onfido-qa="doc-video-confirm-secondary-btn"
         >
           {translate(
             error || previewing
-              ? 'doc_video_confirmation.button_redo'
-              : 'doc_video_confirmation.button_preview'
+              ? 'video_confirmation.button_secondary'
+              : 'doc_video_confirmation.button_secondary'
           )}
         </Button>
       </div>
