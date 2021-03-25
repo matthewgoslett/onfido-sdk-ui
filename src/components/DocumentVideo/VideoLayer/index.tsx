@@ -13,7 +13,7 @@ import useCaptureStep from './useCaptureStep'
 import style from './style.scss'
 
 import type { CaptureFlows } from '~types/docVideo'
-import type { VideoLayerProps } from '../VideoCapture'
+import type { VideoOverlayProps } from '../../VideoCapture'
 
 type OverlayProps = {
   withPlaceholder?: boolean
@@ -25,7 +25,7 @@ export type Props = {
   footerHeightLimit: number
   onSubmit: () => void
   renderOverlay: (props: OverlayProps) => h.JSX.Element | null
-} & VideoLayerProps
+} & VideoOverlayProps
 
 const VideoLayer: FunctionComponent<Props> = ({
   captureFlow,

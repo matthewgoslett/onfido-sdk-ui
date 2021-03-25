@@ -9,7 +9,7 @@ import { getInactiveError } from '~utils/inactiveError'
 import DocumentOverlay, {
   calculateHollowRect,
 } from '../Overlay/DocumentOverlay'
-import VideoCapture from '../VideoCapture'
+import VideoCapture, { VideoOverlayProps } from '../VideoCapture'
 import PaperIdFlowSelector from './PaperIdFlowSelector'
 import VideoLayer from './VideoLayer'
 
@@ -149,15 +149,6 @@ const DocumentVideo: FunctionComponent<Props> = ({
 
   const issuingCountry = issuingCountryData?.country_alpha2
 
-  if (!captureFlow) {
-    return (
-      <PaperIdFlowSelector
-        documentType={documentType}
-        onSelectFlow={setCaptureFlow}
-      />
-    )
-  }
-
   const overlayBottomMargin = 0.5
   const documentOverlayProps = {
     documentType,
@@ -170,11 +161,36 @@ const DocumentVideo: FunctionComponent<Props> = ({
   )
 
   const passedProps = {
-    captureFlow,
     documentType,
     flowRestartTrigger,
     footerHeightLimit: overlayHollowRect.bottom,
     onSubmit: () => setFlowComplete(true),
+  }
+
+  const renderVideoOverlay = (props: VideoOverlayProps) => {
+    if (!captureFlow) {
+      return (
+        <PaperIdFlowSelector
+          documentType={documentType}
+          onSelectFlow={setCaptureFlow}
+        />
+      )
+    }
+
+    return (
+      <VideoLayer
+        {...props}
+        {...passedProps}
+        captureFlow={captureFlow}
+        renderOverlay={(props) => (
+          <DocumentOverlay
+            {...props}
+            {...documentOverlayProps}
+            marginBottom={overlayBottomMargin}
+          />
+        )}
+      />
+    )
   }
 
   return (
@@ -187,19 +203,7 @@ const DocumentVideo: FunctionComponent<Props> = ({
       onRedo={() => setFlowRestartTrigger((prevTrigger) => prevTrigger + 1)}
       onVideoCapture={onVideoCapture}
       renderFallback={renderFallback}
-      renderVideoLayer={(props) => (
-        <VideoLayer
-          {...props}
-          {...passedProps}
-          renderOverlay={(props) => (
-            <DocumentOverlay
-              {...props}
-              {...documentOverlayProps}
-              marginBottom={overlayBottomMargin}
-            />
-          )}
-        />
-      )}
+      renderVideoOverlay={renderVideoOverlay}
       trackScreen={trackScreen}
       webcamRef={webcamRef}
     />
