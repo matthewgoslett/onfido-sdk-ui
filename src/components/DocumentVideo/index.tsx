@@ -3,19 +3,20 @@ import { memo, useEffect, useRef, useState } from 'preact/compat'
 import { useSelector } from 'react-redux'
 import Webcam from 'react-webcam-onfido'
 
-import { useContainerDimensions } from '~contexts'
 import { mimeType } from '~utils/blob'
 import { screenshot } from '~utils/camera'
 import { getInactiveError } from '~utils/inactiveError'
-import DocumentOverlay, {
-  calculateHollowRect,
-} from '../Overlay/DocumentOverlay'
+import DocumentOverlay from '../Overlay/DocumentOverlay'
 import VideoCapture, { VideoOverlayProps } from '../VideoCapture'
 import PaperIdFlowSelector from './PaperIdFlowSelector'
-import VideoLayer from './VideoLayer'
+import CaptureControls from './CaptureControls'
 
 import type { CountryData } from '~types/commons'
-import type { CaptureVariants, CaptureFlows } from '~types/docVideo'
+import type {
+  CaptureVariants,
+  CaptureFlows,
+  CaptureSteps,
+} from '~types/docVideo'
 import type { WithTrackingProps } from '~types/hocs'
 import type { RootState, CapturePayload } from '~types/redux'
 import type {
@@ -72,14 +73,15 @@ const DocumentVideo: FunctionComponent<Props> = ({
   const [captureFlow, setCaptureFlow] = useState(
     getCaptureFlow(documentType, issuingCountryData?.country_alpha2)
   )
+  const [showOverlayPlaceholder, setShowOverlayPlaceholder] = useState(false)
   const [flowComplete, setFlowComplete] = useState(false)
 
   /**
-   * Because every flow control was placed inside VideoLayer _except_ restart,
+   * Because every flow control was placed inside CaptureControls _except_ restart,
    * and the redo event was controlled from VideoCapture,
    * we need a mechanism to trigger flow restart from outside.
    * This state will be incremented every time VideoCapture ask for redo,
-   * hence VideoLayer will be updated with a new value and then restart the flow
+   * hence CaptureControls will be updated with a new value and then restart the flow
    */
   const [flowRestartTrigger, setFlowRestartTrigger] = useState(0)
 
@@ -93,7 +95,6 @@ const DocumentVideo: FunctionComponent<Props> = ({
     undefined
   )
   const webcamRef = useRef<Webcam>(null)
-  const containerDimensions = useContainerDimensions()
 
   useEffect(() => {
     if (!flowComplete) {
@@ -151,48 +152,40 @@ const DocumentVideo: FunctionComponent<Props> = ({
 
   const issuingCountry = issuingCountryData?.country_alpha2
 
-  const overlayBottomMargin = 0.5
   const documentOverlayProps = {
     documentType,
     isPaperId: captureFlow === 'paperId',
     issuingCountry,
+    marginBottom: 0.5,
+    withPlaceholder: showOverlayPlaceholder,
   }
-  const overlayHollowRect = calculateHollowRect(
-    documentOverlayProps,
-    containerDimensions,
-    overlayBottomMargin
-  )
 
-  const passedProps = {
+  const captureControlsProps = {
     documentType,
     flowRestartTrigger,
-    footerHeightLimit: overlayHollowRect.bottom,
+    onStepChange: (step: CaptureSteps) =>
+      setShowOverlayPlaceholder(step === 'intro'),
     onSubmit: () => setFlowComplete(true),
   }
 
   const renderVideoOverlay = (props: VideoOverlayProps) => {
-    if (!captureFlow) {
-      return (
-        <PaperIdFlowSelector
-          documentType={documentType}
-          onSelectFlow={setCaptureFlow}
-        />
-      )
-    }
+    const overlayFooter = captureFlow ? (
+      <CaptureControls
+        {...props}
+        {...captureControlsProps}
+        captureFlow={captureFlow}
+      />
+    ) : (
+      <PaperIdFlowSelector
+        documentType={documentType}
+        onSelectFlow={setCaptureFlow}
+      />
+    )
 
     return (
-      <VideoLayer
-        {...props}
-        {...passedProps}
-        captureFlow={captureFlow}
-        renderOverlay={(props) => (
-          <DocumentOverlay
-            {...props}
-            {...documentOverlayProps}
-            marginBottom={overlayBottomMargin}
-          />
-        )}
-      />
+      <DocumentOverlay {...documentOverlayProps}>
+        {overlayFooter}
+      </DocumentOverlay>
     )
   }
 

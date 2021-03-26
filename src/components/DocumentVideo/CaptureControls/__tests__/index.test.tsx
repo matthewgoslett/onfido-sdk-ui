@@ -3,22 +3,20 @@ import { useState } from 'preact/compat'
 import { mount, ReactWrapper } from 'enzyme'
 
 import MockedLocalised from '~jest/MockedLocalised'
-import VideoLayer, { Props as VideoLayerProps } from '../index'
+import CaptureControls, { Props as CaptureControlsProps } from '../index'
 
 import type { CaptureFlows } from '~types/docVideo'
 
 navigator.vibrate = jest.fn()
 
-const defaultProps: VideoLayerProps = {
+const defaultProps: CaptureControlsProps = {
   captureFlow: 'cardId',
   disableInteraction: false,
   flowRestartTrigger: 0,
-  footerHeightLimit: 300,
   isRecording: false,
   onStart: jest.fn(),
   onStop: jest.fn(),
   onSubmit: jest.fn(),
-  renderOverlay: jest.fn().mockReturnValue(<div>Overlay</div>),
 }
 
 type MockedVideoCaptureProps = {
@@ -35,7 +33,7 @@ const MockedVideoCapture: FunctionComponent<MockedVideoCaptureProps> = ({
 
   return (
     <MockedLocalised>
-      <VideoLayer
+      <CaptureControls
         {...defaultProps}
         captureFlow={captureFlow}
         flowRestartTrigger={flowRestartTrigger}
@@ -133,7 +131,7 @@ const assertSuccessState = (wrapper: ReactWrapper, lastStep = false) => {
 }
 
 describe('DocumentVideo', () => {
-  describe('VideoLayer', () => {
+  describe('CaptureControls', () => {
     beforeAll(() => {
       console.warn = jest.fn()
       jest.useFakeTimers()
@@ -147,7 +145,7 @@ describe('DocumentVideo', () => {
     it('renders without crashing', () => {
       const wrapper = mount(
         <MockedLocalised>
-          <VideoLayer {...defaultProps} />
+          <CaptureControls {...defaultProps} />
         </MockedLocalised>
       )
 
