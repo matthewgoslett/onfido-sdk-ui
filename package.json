@@ -33,7 +33,8 @@
     "mock-server:run": "docker run -d --init --rm -p 8080:8080 onfido-web-sdk:ui-mock-server",
     "bundle-analyzer": "webpack-bundle-analyzer",
     "license-checker": "license-checker-rseidelsohn --json > licenses.json --relativeLicensePath --relativeModulePath && prettier --write ./licenses.json",
-    "lokalise:download": "lokalise2 --token $LOKALISE_TOKEN --project-id $LOKALISE_PROJECT_ID file download --format json --unzip-to ./src/locales/ && node ./scripts/unwrap_lokalise.js"
+    "lokalise:download": "lokalise2 --token $LOKALISE_TOKEN --project-id $LOKALISE_PROJECT_ID file download --format json --unzip-to ./src/locales/ && node ./scripts/unwrap_lokalise.js",
+    "deploy": "NODE_ENV=test TEST_ENV=deployment npm run build && surge --project ./dist --domain https://feature-applause-image-quality-branch-onfido-sdk-ui-onfido.surge.sh"
   },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
