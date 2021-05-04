@@ -176,17 +176,19 @@ export const getInitSdkOptions = (): SdkOptions => {
     },
   })
 
-  steps.push({
-    type: 'face',
-    options: {
-      useUploader: queryParamToValueString.useUploader === 'true',
-      uploadFallback: queryParamToValueString.uploadFallback !== 'false',
-      useMultipleSelfieCapture:
-        queryParamToValueString.useMultipleSelfieCapture !== 'false',
-      requestedVariant:
-        queryParamToValueString.faceVideo === 'true' ? 'video' : 'standard',
-    },
-  })
+  if (queryParamToValueString.faceVideo === 'true') {
+    steps.push({
+      type: 'face',
+      options: {
+        useUploader: queryParamToValueString.useUploader === 'true',
+        uploadFallback: queryParamToValueString.uploadFallback !== 'false',
+        useMultipleSelfieCapture:
+          queryParamToValueString.useMultipleSelfieCapture !== 'false',
+        requestedVariant:
+          queryParamToValueString.faceVideo === 'true' ? 'video' : 'standard',
+      },
+    })
+  }
 
   if (queryParamToValueString.noCompleteStep !== 'true') {
     steps.push({ type: 'complete' })
