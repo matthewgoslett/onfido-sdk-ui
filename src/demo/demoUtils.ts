@@ -462,7 +462,7 @@ export const createCheckIfNeeded = (
     return
   }
 
-  const { poa, docVideo, faceVideo } = queryParamToValueString
+  const { poa, docVideo /*, faceVideo */ } = queryParamToValueString
 
   const request = new XMLHttpRequest()
 
@@ -489,7 +489,7 @@ export const createCheckIfNeeded = (
     applicant_id: applicantId,
     report_names: [
       poa ? 'proof_of_address' : 'document',
-      faceVideo ? 'facial_similarity_video' : 'facial_similarity_photo',
+      // faceVideo ? 'facial_similarity_video' : 'facial_similarity_photo',
     ],
     document_ids: documentIds,
     api_version: docVideo ? 'v4' : 'v3',
