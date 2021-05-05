@@ -40,8 +40,10 @@ type Props = {
 }
 
 const ApplicantForm: FunctionComponent<Props> = ({ onSubmit }) => {
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('Web IQA')
+  const [lastName, setLastName] = useState(
+    require('../../package.json').version
+  )
   const [email, setEmail] = useState('')
 
   const handleSubmit = (event: Event) => {
@@ -58,8 +60,18 @@ const ApplicantForm: FunctionComponent<Props> = ({ onSubmit }) => {
     <div>
       <h1>Applicant data</h1>
       <form id="applicant-form" onSubmit={handleSubmit}>
-        <Field label="First name" value={firstName} onChange={setFirstName} />
-        <Field label="Last name" value={lastName} onChange={setLastName} />
+        <Field
+          hidden
+          label="First name"
+          onChange={setFirstName}
+          value={firstName}
+        />
+        <Field
+          hidden
+          label="Last name"
+          onChange={setLastName}
+          value={lastName}
+        />
         <Field label="Email" value={email} onChange={setEmail} />
         <button type="submit">Submit</button>
       </form>
