@@ -10,6 +10,7 @@
   "license": "SEE LICENSE IN ./LICENSE",
   "scripts": {
     "dev": "NODE_ENV=development webpack-dev-server --inline --hot --progress --https",
+    "stg": "NODE_ENV=staging webpack-dev-server --inline --hot --progress --https",
     "travis": "node_modules/http-server/bin/http-server dist/ -S -C test/cert.pem -K test/key.pem",
     "build": "webpack --quiet --display-error-details --bail",
     "build:dev": "NODE_ENV=development npm run build",
